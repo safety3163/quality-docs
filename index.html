@@ -1381,7 +1381,7 @@
     document.body.appendChild(wrap);
   }
 
-  // ---------------- Voice search ----------------
+    // ---------------- Voice search ----------------
   var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   var micBtn = document.getElementById('micBtn');
   var listenCaption = document.getElementById('listenCaption');
@@ -1390,9 +1390,20 @@
     micBtn.title = 'この端末では音声検索を利用できません';
   } else {
     var recognizing = false;
+    var activeRec = null;
+    var recSafetyTimer = null;
+    function stopListening(){
+      // iOS Safari in particular sometimes never fires its own
+      // "end of speech" detection, leaving the mic stuck in the
+      // listening state forever with no result and no error. Tapping
+      // the button again while listening (or the safety timer below)
+      // now explicitly stops the recognizer instead of doing nothing.
+      if(activeRec){ try{ activeRec.stop(); }catch(e){} }
+    }
     micBtn.addEventListener('click', function(){
-      if(recognizing) return;
+      if(recognizing){ stopListening(); return; }
       var rec = new SpeechRec();
+      activeRec = rec;
       rec.lang = 'ja-JP';
       rec.interimResults = false;
       rec.maxAlternatives = 1;
@@ -1411,10 +1422,21 @@
       };
       rec.onend = function(){
         recognizing = false;
+        activeRec = null;
+        if(recSafetyTimer){ clearTimeout(recSafetyTimer); recSafetyTimer = null; }
         micBtn.classList.remove('listening');
         listenCaption.style.display = 'none';
       };
-      try{ rec.start(); } catch(e){ recognizing=false; micBtn.classList.remove('listening'); listenCaption.style.display='none'; }
+      try{
+        rec.start();
+        // Safety net: if nothing happens within 8s (no result, no
+        // error, no auto-end — the iOS Safari failure mode reported
+        // in practice), stop the recognizer ourselves so the mic
+        // doesn't stay red/listening indefinitely with no feedback.
+        recSafetyTimer = setTimeout(function(){
+          if(recognizing) stopListening();
+        }, 8000);
+      } catch(e){ recognizing=false; activeRec=null; micBtn.classList.remove('listening'); listenCaption.style.display='none'; }
     });
   }
 
