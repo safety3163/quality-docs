@@ -1822,7 +1822,7 @@
       // 30s, not the usual 15s, because Gemini's own vision-model latency on
       // a multi-page document can comfortably exceed the 15s cap used for
       // the much lighter toggle/delete requests.
-      return withTimeout(apiPost('aiExtract', { images: images }, { signal: signal }), 30000);
+      return withTimeout(apiPost('aiExtract', { images: images }, { signal: signal }), 60000);
     }).then(function(resp){
       var status = document.getElementById('aiStatus'); if(status && status.parentNode) status.parentNode.removeChild(status);
       if(!resp || resp.ok !== true){
