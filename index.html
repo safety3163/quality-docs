@@ -1830,7 +1830,7 @@
       var status = document.getElementById('aiStatus'); if(status && status.parentNode) status.parentNode.removeChild(status);
       if(!resp || resp.ok !== true){
         aiDisabledForSession = true;
-        area.insertAdjacentHTML('beforeend','<div class="ai-note warn">この端末ではAI自動読み取りを利用できません。手入力してください。</div>');
+        area.insertAdjacentHTML('beforeend','<div class="ai-note warn">この端末ではAI自動読み取りを利用できません。手入力してください。(詳細: '+escapeHtml(resp&&resp.error?String(resp.error):'応答なし')+')</div>');
         return;
       }
       var dat = resp.data || {};
@@ -1847,7 +1847,7 @@
       var status = document.getElementById('aiStatus'); if(status && status.parentNode) status.parentNode.removeChild(status);
       if(err && err.name === 'AbortError') return; // modal was closed mid-request; don't disable AI just for that
       aiDisabledForSession = true;
-      area.insertAdjacentHTML('beforeend','<div class="ai-note warn">この端末ではAI自動読み取りを利用できません。手入力してください。</div>');
+      area.insertAdjacentHTML('beforeend','<div class="ai-note warn">この端末ではAI自動読み取りを利用できません。手入力してください。(詳細: '+escapeHtml(err&&(err.message||err.name)?String(err.message||err.name):'不明なエラー')+')</div>');
     }).finally(function(){
       if(btn) btn.disabled = false;
       aiAbort = null;
