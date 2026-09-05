@@ -1414,7 +1414,7 @@
       micBtn.classList.add('listening');
       listenCaption.style.display = 'flex';
       rec.onresult = function(ev){
-        var text = ev.results[0][0].transcript;
+        var text = ev.results[0][0].transcript.replace(/[。、,.!?！？]/g, '').trim();
         searchInput.value = text;
         query = text;
         clearBtn.style.display = 'flex';
