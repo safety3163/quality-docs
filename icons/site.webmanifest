@@ -8,5 +8,5 @@
   "theme_color": "#0A5295",
   "background_color": "#F1F3EF",
   "display": "standalone",
-  "start_url": "."
+    "start_url": "/quality-docs/"
 }
