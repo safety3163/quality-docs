@@ -375,6 +375,16 @@
 
 </main>
 
+<div id="confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:100; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; border-radius:14px; padding:22px 20px; max-width:340px; width:100%; box-shadow:0 8px 30px rgba(0,0,0,.25);">
+    <div id="confirm-message" style="font-size:15px; font-weight:700; margin-bottom:18px; line-height:1.5;"></div>
+    <div style="display:flex; gap:10px;">
+      <button id="confirm-no" style="flex:1; padding:11px; border:1px solid #DCE1DD; border-radius:9px; background:#fff; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;">キャンセル</button>
+      <button id="confirm-yes" style="flex:1; padding:11px; border:none; border-radius:9px; background:#0A5295; color:#fff; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ▼▼▼ デプロイ後、Apps ScriptのウェブアプリURLに置き換えてください ▼▼▼
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxeKNRgxoeSAtl_CCSZLjl_r8nd6mY4WLvQQ939lQLJzcVMTDHfuaV7A822x0kvO8t3/exec";
@@ -609,15 +619,32 @@ function fmtDate(v){ return v; }
 function fmtDateTime(v){ return v; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-async function doApprove(id){
-  if (!confirm('この申請を承認しますか？')) return;
-  await postAction('approve', {id});
-  loadData();
+function doApprove(id){
+  showConfirm('この申請を承認しますか？', async ()=>{
+    await postAction('approve', {id});
+    loadData();
+  });
 }
-async function doReject(id){
-  if (!confirm('この申請を却下しますか？')) return;
-  await postAction('reject', {id});
-  loadData();
+function doReject(id){
+  showConfirm('この申請を却下しますか？', async ()=>{
+    await postAction('reject', {id});
+    loadData();
+  });
+}
+
+function showConfirm(message, onYes){
+  const modal = document.getElementById('confirm-modal');
+  document.getElementById('confirm-message').textContent = message;
+  modal.style.display = 'flex';
+  const yesBtn = document.getElementById('confirm-yes');
+  const noBtn = document.getElementById('confirm-no');
+  const cleanup = () => {
+    modal.style.display = 'none';
+    yesBtn.onclick = null;
+    noBtn.onclick = null;
+  };
+  yesBtn.onclick = () => { cleanup(); onYes(); };
+  noBtn.onclick = () => { cleanup(); };
 }
 
 async function postAction(action, payload){
