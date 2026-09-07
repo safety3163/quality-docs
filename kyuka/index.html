@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>休暇届申請</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Roboto+Mono:wght@500;600&display=swap">
+<style>
+  :root{
+    --blue:#0A5295;
+    --blue-dark:#073D70;
+    --bg:#F1F3EF;
+    --card:#FFFFFF;
+    --line:#DCE1DD;
+    --text:#22282B;
+    --muted:#6B7580;
+    --ok:#1E8E5A;
+    --ok-bg:#E6F5EC;
+    --warn:#C9852A;
+    --warn-bg:#FBF0DF;
+    --bad:#C0392B;
+    --bad-bg:#FBE8E5;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    padding-bottom:40px;
+  }
+  header{
+    background:var(--blue);
+    color:#fff;
+    padding:18px 16px 16px;
+    position:sticky; top:0; z-index:10;
+    box-shadow:0 2px 10px rgba(0,0,0,.15);
+  }
+  header h1{
+    margin:0 0 2px;
+    font-size:18px;
+    font-weight:700;
+  }
+  header p{
+    margin:0;
+    font-size:12px;
+    opacity:.85;
+  }
+  .tabs{
+    display:flex;
+    max-width:720px;
+    margin:14px auto 0;
+    padding:0 12px;
+    gap:8px;
+  }
+  .tab-btn{
+    flex:1;
+    padding:11px 6px;
+    border:none;
+    border-radius:10px 10px 0 0;
+    background:rgba(255,255,255,.18);
+    color:#fff;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .tab-btn.active{
+    background:var(--bg);
+    color:var(--blue);
+  }
+  main{
+    max-width:720px;
+    margin:0 auto;
+    padding:16px 12px 0;
+  }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .card{
+    background:var(--card);
+    border-radius:14px;
+    padding:18px 16px;
+    box-shadow:0 1px 6px rgba(0,0,0,.06);
+    margin-bottom:16px;
+  }
+  .field{ margin-bottom:16px; }
+  .field label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:var(--blue-dark);
+    margin-bottom:6px;
+  }
+  .field .hint{
+    font-size:11px;
+    color:var(--muted);
+    font-weight:400;
+    margin-left:6px;
+  }
+  select, input[type=text], input[type=date], input[type=datetime-local], textarea{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    font-size:15px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--text);
+  }
+  textarea{ resize:vertical; min-height:64px; }
+  select:focus, input:focus, textarea:focus{
+    outline:none;
+    border-color:var(--blue);
+    box-shadow:0 0 0 3px rgba(10,82,149,.12);
+  }
+  .cat-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .cat-opt{
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:10px 10px;
+    font-size:13.5px;
+    cursor:pointer;
+    background:#fff;
+    text-align:center;
+    user-select:none;
+  }
+  .cat-opt.selected{
+    background:var(--blue);
+    border-color:var(--blue);
+    color:#fff;
+    font-weight:700;
+  }
+  .row2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    align-items:end;
+  }
+  .calc-note{
+    font-size:12.5px;
+    color:var(--blue-dark);
+    margin-top:6px;
+    font-weight:700;
+  }
+  .sub-block{
+    border-left:3px solid var(--blue);
+    padding-left:12px;
+    margin-top:4px;
+  }
+  .submit-btn{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:var(--blue);
+    color:#fff;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .submit-btn:active{ background:var(--blue-dark); }
+  .submit-btn:disabled{ opacity:.5; }
+
+  .msg{
+    margin-top:12px;
+    padding:11px 12px;
+    border-radius:9px;
+    font-size:13.5px;
+    font-weight:700;
+    display:none;
+  }
+  .msg.ok{ display:block; background:var(--ok-bg); color:var(--ok); }
+  .msg.bad{ display:block; background:var(--bad-bg); color:var(--bad); }
+
+  .filter-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:12px;
+    font-size:13.5px;
+  }
+  .filter-row select{ width:auto; flex:1; }
+  .switch{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    white-space:nowrap;
+    font-weight:700;
+    color:var(--blue-dark);
+  }
+
+  .req-card{
+    background:var(--card);
+    border-radius:12px;
+    padding:14px 14px;
+    margin-bottom:10px;
+    box-shadow:0 1px 6px rgba(0,0,0,.06);
+    border-left:5px solid var(--muted);
+  }
+  .req-card.st-未承認{ border-left-color:var(--warn); }
+  .req-card.st-承認済み{ border-left-color:var(--ok); }
+  .req-card.st-却下{ border-left-color:var(--bad); }
+
+  .req-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .req-name{ font-weight:700; font-size:15px; }
+  .req-cat{ font-size:12.5px; color:var(--blue-dark); font-weight:700; margin-top:2px; }
+  .badge{
+    font-size:11.5px;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+  .badge.未承認{ background:var(--warn-bg); color:var(--warn); }
+  .badge.承認済み{ background:var(--ok-bg); color:var(--ok); }
+  .badge.却下{ background:var(--bad-bg); color:var(--bad); }
+
+  .req-meta{ font-size:13px; color:var(--text); line-height:1.6; margin-top:4px; }
+  .req-meta .k{ color:var(--muted); }
+  .req-reason{
+    font-size:13px;
+    margin-top:8px;
+    background:var(--bg);
+    padding:8px 10px;
+    border-radius:8px;
+    white-space:pre-wrap;
+  }
+  .req-actions{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+  }
+  .req-actions button{
+    flex:1;
+    padding:9px;
+    border:none;
+    border-radius:8px;
+    font-size:13.5px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .btn-approve{ background:var(--ok); color:#fff; }
+  .btn-reject{ background:#fff; color:var(--bad); border:1px solid var(--bad) !important; }
+
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    font-size:13.5px;
+    padding:30px 10px;
+  }
+  .loading{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    padding:20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>休暇届申請</h1>
+  <p>日本セイフティー株式会社　東北機材センター</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="apply">申請</button>
+  <button class="tab-btn" data-tab="list">承認・履歴</button>
+</div>
+
+<main>
+
+  <!-- ===== 申請 タブ ===== -->
+  <section id="view-apply" class="view active">
+    <div class="card">
+      <div class="field">
+        <label>氏名</label>
+        <select id="f-name">
+          <option value="">選択してください</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>区分</label>
+        <div class="cat-grid" id="cat-grid"></div>
+        <div id="cat-detail-wrap" style="display:none; margin-top:10px;">
+          <input type="text" id="f-catdetail" placeholder="その他の内容を入力">
+        </div>
+      </div>
+
+      <div class="field" id="block-day">
+        <label>期間<span class="hint">複数日にわたる場合</span></label>
+        <div class="sub-block">
+          <div class="row2">
+            <div>
+              <label style="font-weight:400;font-size:12px;">開始日</label>
+              <input type="date" id="f-datefrom">
+            </div>
+            <div>
+              <label style="font-weight:400;font-size:12px;">終了日</label>
+              <input type="date" id="f-dateto">
+            </div>
+          </div>
+          <div class="calc-note" id="days-note"></div>
+        </div>
+      </div>
+
+      <div class="field" id="block-time" style="display:none;">
+        <label>日時<span class="hint">時間単位の場合</span></label>
+        <div class="sub-block">
+          <div class="row2">
+            <div>
+              <label style="font-weight:400;font-size:12px;">開始</label>
+              <input type="datetime-local" id="f-dtfrom">
+            </div>
+            <div>
+              <label style="font-weight:400;font-size:12px;">終了</label>
+              <input type="datetime-local" id="f-dtto">
+            </div>
+          </div>
+          <div class="calc-note" id="hours-note"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>事由</label>
+        <textarea id="f-reason" placeholder="申請理由を入力してください"></textarea>
+      </div>
+
+      <div class="field">
+        <label>連絡先<span class="hint">休暇中の連絡先（任意）</span></label>
+        <input type="text" id="f-contact" placeholder="携帯電話番号など">
+      </div>
+
+      <div class="field">
+        <label>備考<span class="hint">任意</span></label>
+        <textarea id="f-remarks" placeholder=""></textarea>
+      </div>
+
+      <button class="submit-btn" id="btn-submit">申請する</button>
+      <div class="msg" id="apply-msg"></div>
+    </div>
+  </section>
+
+  <!-- ===== 承認・履歴 タブ ===== -->
+  <section id="view-list" class="view">
+    <div class="card">
+      <div class="filter-row">
+        <select id="f-filter-name">
+          <option value="">全員</option>
+        </select>
+        <label class="switch">
+          <input type="checkbox" id="f-filter-pending" checked>
+          未承認のみ
+        </label>
+      </div>
+    </div>
+    <div id="list-wrap">
+      <div class="loading">読み込み中...</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ▼▼▼ デプロイ後、Apps ScriptのウェブアプリURLに置き換えてください ▼▼▼
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxeKNRgxoeSAtl_CCSZLjl_r8nd6mY4WLvQQ939lQLJzcVMTDHfuaV7A822x0kvO8t3/exec";
+// ▲▲▲
+
+const DAY_BASED = ['1.有給休暇','2.振替休暇','3.慶弔休暇','4.特別休暇','5.欠勤','9.出張','12.休日出勤'];
+const TIME_BASED = ['6.遅刻','7.早退','8.私用外出','10.直行','11.直帰'];
+const CATEGORIES = ['1.有給休暇','2.振替休暇','3.慶弔休暇','4.特別休暇','5.欠勤','6.遅刻','7.早退','8.私用外出','9.出張','10.直行','11.直帰','12.休日出勤','13.その他'];
+
+let staffList = [];
+let requestsCache = [];
+let selectedCategory = '';
+
+/* ---------- タブ切替 ---------- */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'list') loadData();
+  });
+});
+
+/* ---------- 区分グリッド生成 ---------- */
+const catGrid = document.getElementById('cat-grid');
+CATEGORIES.forEach(cat=>{
+  const div = document.createElement('div');
+  div.className = 'cat-opt';
+  div.textContent = cat.replace(/^\d+\./,'').trim();
+  div.dataset.cat = cat;
+  div.addEventListener('click', ()=>selectCategory(cat));
+  catGrid.appendChild(div);
+});
+
+function selectCategory(cat){
+  selectedCategory = cat;
+  document.querySelectorAll('.cat-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.cat === cat);
+  });
+  document.getElementById('cat-detail-wrap').style.display = (cat === '13.その他') ? 'block' : 'none';
+  document.getElementById('block-day').style.display = DAY_BASED.includes(cat) ? 'block' : (cat==='13.その他' ? 'block' : 'none');
+  document.getElementById('block-time').style.display = TIME_BASED.includes(cat) ? 'block' : (cat==='13.その他' ? 'block' : 'none');
+}
+
+/* ---------- 日数・時間の自動計算 ---------- */
+function calcDays(){
+  const from = document.getElementById('f-datefrom').value;
+  const to = document.getElementById('f-dateto').value;
+  const note = document.getElementById('days-note');
+  if (!from || !to) { note.textContent = ''; return; }
+  const d1 = new Date(from), d2 = new Date(to);
+  const diff = Math.round((d2-d1)/86400000) + 1;
+  note.textContent = diff >= 1 ? diff + ' 日間' : '終了日は開始日以降にしてください';
+}
+document.getElementById('f-datefrom').addEventListener('change', calcDays);
+document.getElementById('f-dateto').addEventListener('change', calcDays);
+
+function calcHours(){
+  const from = document.getElementById('f-dtfrom').value;
+  const to = document.getElementById('f-dtto').value;
+  const note = document.getElementById('hours-note');
+  if (!from || !to) { note.textContent = ''; return; }
+  const d1 = new Date(from), d2 = new Date(to);
+  const diffMin = Math.round((d2-d1)/60000);
+  if (diffMin < 0) { note.textContent = '終了は開始より後にしてください'; return; }
+  const h = Math.floor(diffMin/60), m = diffMin % 60;
+  note.textContent = h + ' 時間 ' + m + ' 分';
+}
+document.getElementById('f-dtfrom').addEventListener('change', calcHours);
+document.getElementById('f-dtto').addEventListener('change', calcHours);
+
+/* ---------- 申請送信 ---------- */
+document.getElementById('btn-submit').addEventListener('click', async ()=>{
+  const msg = document.getElementById('apply-msg');
+  msg.className = 'msg';
+
+  const name = document.getElementById('f-name').value;
+  if (!name){ showMsg(msg,'氏名を選択してください', false); return; }
+  if (!selectedCategory){ showMsg(msg,'区分を選択してください', false); return; }
+
+  const dateFrom = document.getElementById('f-datefrom').value;
+  const dateTo = document.getElementById('f-dateto').value;
+  const dtFrom = document.getElementById('f-dtfrom').value;
+  const dtTo = document.getElementById('f-dtto').value;
+
+  let days = '';
+  if (dateFrom && dateTo){
+    const diff = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
+    days = diff >= 1 ? diff : '';
+  }
+  let hours = '';
+  if (dtFrom && dtTo){
+    const diffMin = Math.round((new Date(dtTo)-new Date(dtFrom))/60000);
+    if (diffMin >= 0) hours = Math.floor(diffMin/60)+':'+String(diffMin%60).padStart(2,'0');
+  }
+
+  const payload = {
+    name: name,
+    category: selectedCategory,
+    categoryDetail: document.getElementById('f-catdetail').value,
+    dateFrom: dateFrom, dateTo: dateTo, days: days,
+    dtFrom: dtFrom, dtTo: dtTo, hours: hours,
+    reason: document.getElementById('f-reason').value,
+    contact: document.getElementById('f-contact').value,
+    remarks: document.getElementById('f-remarks').value
+  };
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = '送信中...';
+  try{
+    const res = await postAction('submit', payload);
+    if (res.ok){
+      showMsg(msg, '申請しました。承認をお待ちください。', true);
+      resetForm();
+    } else {
+      showMsg(msg, 'エラー: ' + (res.error||'送信に失敗しました'), false);
+    }
+  } catch(err){
+    showMsg(msg, '通信エラーが発生しました。時間をおいて再度お試しください。', false);
+  } finally {
+    btn.disabled = false; btn.textContent = '申請する';
+  }
+});
+
+function resetForm(){
+  document.getElementById('f-name').value = '';
+  selectedCategory = '';
+  document.querySelectorAll('.cat-opt').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('cat-detail-wrap').style.display = 'none';
+  document.getElementById('f-catdetail').value = '';
+  document.getElementById('block-day').style.display = 'block';
+  document.getElementById('block-time').style.display = 'none';
+  ['f-datefrom','f-dateto','f-dtfrom','f-dtto','f-reason','f-contact','f-remarks'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('days-note').textContent = '';
+  document.getElementById('hours-note').textContent = '';
+}
+
+function showMsg(el, text, ok){
+  el.textContent = text;
+  el.className = 'msg ' + (ok ? 'ok' : 'bad');
+  el.style.display = 'block';
+}
+
+/* ---------- 一覧・承認 ---------- */
+async function loadData(){
+  const wrap = document.getElementById('list-wrap');
+  try{
+    const res = await fetch(GAS_URL + '?action=list');
+    const data = await res.json();
+    if (!data.ok){ wrap.innerHTML = '<div class="empty">読み込みエラー: '+(data.error||'')+'</div>'; return; }
+
+    staffList = data.staff || [];
+    requestsCache = data.requests || [];
+    fillNameSelects();
+    renderList();
+  } catch(err){
+    wrap.innerHTML = '<div class="empty">通信エラーが発生しました。</div>';
+  }
+}
+
+function fillNameSelects(){
+  const nameSel = document.getElementById('f-name');
+  const filterSel = document.getElementById('f-filter-name');
+  if (nameSel.options.length <= 1){
+    staffList.forEach(n=>{
+      const o = document.createElement('option'); o.value = n; o.textContent = n;
+      nameSel.appendChild(o);
+    });
+  }
+  if (filterSel.options.length <= 1){
+    staffList.forEach(n=>{
+      const o = document.createElement('option'); o.value = n; o.textContent = n;
+      filterSel.appendChild(o);
+    });
+  }
+}
+
+document.getElementById('f-filter-name').addEventListener('change', renderList);
+document.getElementById('f-filter-pending').addEventListener('change', renderList);
+
+function renderList(){
+  const wrap = document.getElementById('list-wrap');
+  const nameFilter = document.getElementById('f-filter-name').value;
+  const pendingOnly = document.getElementById('f-filter-pending').checked;
+
+  let items = requestsCache.slice();
+  if (nameFilter) items = items.filter(r=>r['氏名']===nameFilter);
+  if (pendingOnly) items = items.filter(r=>r['承認状況']==='未承認');
+
+  if (items.length === 0){
+    wrap.innerHTML = '<div class="empty">該当する申請はありません。</div>';
+    return;
+  }
+
+  wrap.innerHTML = items.map(r=>{
+    const status = r['承認状況'] || '未承認';
+    const catLabel = (r['区分']||'').replace(/^\d+\./,'').trim() + (r['区分詳細'] ? '（'+r['区分詳細']+'）' : '');
+    let periodLine = '';
+    if (r['期間開始日'] && r['期間終了日']){
+      periodLine = fmtDate(r['期間開始日']) + ' 〜 ' + fmtDate(r['期間終了日']) + (r['日数'] ? '　(' + r['日数'] + '日間)' : '');
+    } else if (r['開始日時'] && r['終了日時']){
+      periodLine = fmtDateTime(r['開始日時']) + ' 〜 ' + fmtDateTime(r['終了日時']) + (r['時間'] ? '　(' + r['時間'] + ')' : '');
+    }
+    return `
+    <div class="req-card st-${status}">
+      <div class="req-top">
+        <div>
+          <div class="req-name">${esc(r['氏名'])}</div>
+          <div class="req-cat">${esc(catLabel)}</div>
+        </div>
+        <span class="badge ${status}">${status}</span>
+      </div>
+      <div class="req-meta">
+        ${periodLine ? '<div>'+esc(periodLine)+'</div>' : ''}
+        <div><span class="k">申請日時:</span> ${esc(r['申請日時']||'')}</div>
+        ${r['連絡先'] ? '<div><span class="k">連絡先:</span> '+esc(r['連絡先'])+'</div>' : ''}
+      </div>
+      ${r['事由'] ? '<div class="req-reason">'+esc(r['事由'])+'</div>' : ''}
+      ${status==='未承認' ? `
+      <div class="req-actions">
+        <button class="btn-approve" onclick="doApprove('${r['ID']}')">承認する</button>
+        <button class="btn-reject" onclick="doReject('${r['ID']}')">却下する</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function fmtDate(v){ return v; }
+function fmtDateTime(v){ return v; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function doApprove(id){
+  if (!confirm('この申請を承認しますか？')) return;
+  await postAction('approve', {id});
+  loadData();
+}
+async function doReject(id){
+  if (!confirm('この申請を却下しますか？')) return;
+  await postAction('reject', {id});
+  loadData();
+}
+
+async function postAction(action, payload){
+  const res = await fetch(GAS_URL + '?action=' + action, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // CORSプリフライト回避
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+/* 初期表示: 申請タブでも氏名リストが要るので先読み */
+loadData();
+selectCategory('1.有給休暇');
+</script>
+
+</body>
+</html>
