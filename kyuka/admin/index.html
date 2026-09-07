@@ -118,6 +118,111 @@
     color:var(--blue-dark);
   }
 
+  .field{ margin-bottom:14px; }
+  .field label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    color:var(--blue-dark);
+    margin-bottom:6px;
+  }
+  .field .hint{
+    font-size:11px;
+    color:var(--muted);
+    font-weight:400;
+    margin-left:6px;
+  }
+  input[type=text], input[type=date]{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    font-size:15px;
+    font-family:inherit;
+    background:#fff;
+    color:var(--text);
+  }
+  input:focus{
+    outline:none;
+    border-color:var(--blue);
+    box-shadow:0 0 0 3px rgba(10,82,149,.12);
+  }
+  .cat-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  .cat-opt{
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:10px 10px;
+    font-size:13.5px;
+    cursor:pointer;
+    background:#fff;
+    text-align:center;
+    user-select:none;
+  }
+  .cat-opt.selected{
+    background:var(--blue);
+    border-color:var(--blue);
+    color:#fff;
+    font-weight:700;
+  }
+  .row2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    align-items:end;
+  }
+  .submit-btn{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:var(--blue);
+    color:#fff;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .submit-btn:active{ background:var(--blue-dark); }
+  .submit-btn:disabled{ opacity:.5; }
+  .msg{
+    margin-top:12px;
+    padding:11px 12px;
+    border-radius:9px;
+    font-size:13.5px;
+    font-weight:700;
+    display:none;
+  }
+  .msg.ok{ display:block; background:var(--ok-bg); color:var(--ok); }
+  .msg.bad{ display:block; background:var(--bad-bg); color:var(--bad); }
+  .mgr-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:11px 0;
+    border-top:1px solid var(--line);
+  }
+  .mgr-row:first-child{ border-top:none; }
+  .mgr-info b{ font-size:14px; }
+  .mgr-period{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .mgr-del{
+    flex-shrink:0;
+    padding:8px 14px;
+    border:1px solid var(--bad);
+    border-radius:8px;
+    background:#fff;
+    color:var(--bad);
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .mgr-del:disabled{ opacity:.5; }
+
   .req-card{
     background:var(--card);
     border-radius:12px;
@@ -302,6 +407,36 @@
   <!-- ===== カレンダー タブ ===== -->
   <section id="view-calendar" class="view">
     <div class="card">
+      <div class="field" style="margin-bottom:4px;">
+        <label>高野・平間の休み登録<span class="hint">申請・承認の手続きなしで、直接カレンダーに反映されます</span></label>
+      </div>
+      <div class="field">
+        <div class="cat-grid" id="mgr-name-grid"></div>
+      </div>
+      <div class="field">
+        <div class="row2">
+          <div>
+            <label style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;">開始日</label>
+            <input type="date" id="mgr-datefrom">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;">終了日</label>
+            <input type="date" id="mgr-dateto">
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>事由・備考<span class="hint">任意</span></label>
+        <input type="text" id="mgr-reason" placeholder="（任意）">
+      </div>
+      <button class="submit-btn" id="mgr-submit">休みを登録</button>
+      <div class="msg" id="mgr-msg"></div>
+    </div>
+    <div class="card" id="mgr-list-card" style="display:none;">
+      <div style="font-weight:700; color:var(--blue-dark); margin-bottom:4px;">登録済みの休み</div>
+      <div id="mgr-list"></div>
+    </div>
+    <div class="card">
       <div class="cal-nav">
         <button class="cal-nav-btn" id="cal-prev">‹</button>
         <div class="cal-title" id="cal-title"></div>
@@ -341,6 +476,8 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbxeKNRgxoeSAtl_CCSZLjl_
 
 let staffList = [];
 let requestsCache = [];
+let managersList = [];
+let selectedManagerName = '';
 
 /* ---------- タブ切替 ---------- */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -363,9 +500,12 @@ async function loadData(){
 
     staffList = data.staff || [];
     requestsCache = data.requests || [];
+    managersList = data.managers || [];
     fillNameSelects();
+    buildManagerGrid();
     renderList();
     renderCalendar();
+    renderManagerHolidays();
   } catch(err){
     wrap.innerHTML = '<div class="empty">通信エラーが発生しました。</div>';
   }
@@ -430,9 +570,118 @@ function renderList(){
   }).join('');
 }
 
-function fmtDate(v){ return v; }
+function fmtDate(v){ return String(v==null?'':v).replace(/ 00:00$/,''); }
 function fmtDateTime(v){ return v; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- 高野・平間の休み登録（申請・承認を経ない直接登録） ---------- */
+function buildManagerGrid(){
+  const grid = document.getElementById('mgr-name-grid');
+  if (grid.children.length > 0) return; // 一度だけ生成
+  managersList.forEach(name=>{
+    const div = document.createElement('div');
+    div.className = 'cat-opt';
+    div.textContent = name;
+    div.dataset.name = name;
+    div.addEventListener('click', ()=>{
+      selectedManagerName = name;
+      document.querySelectorAll('#mgr-name-grid .cat-opt').forEach(el=>{
+        el.classList.toggle('selected', el.dataset.name === name);
+      });
+    });
+    grid.appendChild(div);
+  });
+}
+
+document.getElementById('mgr-submit').addEventListener('click', async ()=>{
+  const msg = document.getElementById('mgr-msg');
+  msg.className = 'msg';
+
+  if (!selectedManagerName){ showMgrMsg(msg,'氏名を選択してください', false); return; }
+  const dateFrom = document.getElementById('mgr-datefrom').value;
+  const dateTo = document.getElementById('mgr-dateto').value;
+  if (!dateFrom || !dateTo){ showMgrMsg(msg,'開始日と終了日を入力してください', false); return; }
+  if (new Date(dateTo) < new Date(dateFrom)){ showMgrMsg(msg,'終了日は開始日以降にしてください', false); return; }
+
+  const payload = {
+    name: selectedManagerName,
+    dateFrom: dateFrom,
+    dateTo: dateTo,
+    reason: document.getElementById('mgr-reason').value
+  };
+
+  const btn = document.getElementById('mgr-submit');
+  btn.disabled = true; btn.textContent = '登録中...';
+  try{
+    const res = await postAction('adminAddHoliday', payload);
+    if (res.ok){
+      showMgrMsg(msg, '休みを登録しました。', true);
+      resetMgrForm();
+      await loadData();
+    } else {
+      showMgrMsg(msg, 'エラー: ' + (res.error||'登録に失敗しました'), false);
+    }
+  } catch(err){
+    showMgrMsg(msg, '通信エラーが発生しました。時間をおいて再度お試しください。', false);
+  } finally {
+    btn.disabled = false; btn.textContent = '休みを登録';
+  }
+});
+
+function resetMgrForm(){
+  selectedManagerName = '';
+  document.querySelectorAll('#mgr-name-grid .cat-opt').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('mgr-datefrom').value = '';
+  document.getElementById('mgr-dateto').value = '';
+  document.getElementById('mgr-reason').value = '';
+}
+
+function showMgrMsg(el, text, ok){
+  el.textContent = text;
+  el.className = 'msg ' + (ok ? 'ok' : 'bad');
+  el.style.display = 'block';
+}
+
+function renderManagerHolidays(){
+  const card = document.getElementById('mgr-list-card');
+  const list = document.getElementById('mgr-list');
+  const mine = requestsCache.filter(r => managersList.indexOf(r['氏名']) !== -1);
+
+  if (mine.length === 0){ card.style.display = 'none'; return; }
+
+  card.style.display = 'block';
+  list.innerHTML = mine.map(r=>{
+    const d1 = fmtDate(r['期間開始日']||'');
+    const d2 = fmtDate(r['期間終了日']||'');
+    const period = (d1 && d2) ? (d1 === d2 ? d1 : d1 + ' 〜 ' + d2) : '';
+    return '<div class="mgr-row">'
+      + '<div class="mgr-info"><b>'+esc(r['氏名'])+'</b>'
+      + (period ? '<div class="mgr-period">'+esc(period)+(r['事由']?'　'+esc(r['事由']):'')+'</div>' : '')
+      + '</div>'
+      + '<button class="mgr-del" data-id="'+esc(r['ID'])+'">削除</button>'
+      + '</div>';
+  }).join('');
+
+  list.querySelectorAll('.mgr-del').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      showConfirm('この休みの登録を削除しますか？', async ()=>{
+        btn.disabled = true; btn.textContent = '削除中...';
+        try{
+          const res = await postAction('adminDeleteHoliday', { id: btn.dataset.id });
+          if (res.ok){
+            await loadData();
+          } else {
+            alert('エラー: ' + (res.error || '削除に失敗しました'));
+            btn.disabled = false; btn.textContent = '削除';
+          }
+        } catch(err){
+          alert('通信エラーが発生しました。時間をおいて再度お試しください。');
+          btn.disabled = false; btn.textContent = '削除';
+        }
+      });
+    });
+  });
+}
 
 function doApprove(id){
   showConfirm('この申請を承認しますか？', async ()=>{
