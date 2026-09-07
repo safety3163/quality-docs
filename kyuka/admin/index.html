@@ -132,7 +132,7 @@
     font-weight:400;
     margin-left:6px;
   }
-  input[type=text], input[type=date]{
+  input[type=text], input[type=date], input[type=datetime-local]{
     width:100%;
     padding:11px 12px;
     border:1px solid var(--line);
@@ -146,6 +146,17 @@
     outline:none;
     border-color:var(--blue);
     box-shadow:0 0 0 3px rgba(10,82,149,.12);
+  }
+  .sub-block{
+    border-left:3px solid var(--blue);
+    padding-left:12px;
+    margin-top:4px;
+  }
+  .calc-note{
+    font-size:12.5px;
+    color:var(--blue-dark);
+    margin-top:6px;
+    font-weight:700;
   }
   .cat-grid{
     display:grid;
@@ -414,17 +425,51 @@
         <div class="cat-grid" id="mgr-name-grid"></div>
       </div>
       <div class="field">
-        <div class="row2">
-          <div>
-            <label style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;">開始日</label>
-            <input type="date" id="mgr-datefrom">
+        <label>取得区分<span class="hint">全日・半休・時間休を選択</span></label>
+        <div class="cat-grid" id="mgr-subtype-grid"></div>
+      </div>
+
+      <div class="field" id="mgr-block-day">
+        <label>期間<span class="hint">複数日にわたる場合</span></label>
+        <div class="sub-block">
+          <div class="row2">
+            <div>
+              <label style="font-weight:400;font-size:12px;">開始日</label>
+              <input type="date" id="mgr-datefrom">
+            </div>
+            <div>
+              <label style="font-weight:400;font-size:12px;">終了日</label>
+              <input type="date" id="mgr-dateto">
+            </div>
           </div>
-          <div>
-            <label style="font-size:12px; font-weight:700; color:var(--muted); margin-bottom:4px;">終了日</label>
-            <input type="date" id="mgr-dateto">
-          </div>
+          <div class="calc-note" id="mgr-days-note"></div>
         </div>
       </div>
+
+      <div class="field" id="mgr-block-halfday" style="display:none;">
+        <label>取得日</label>
+        <div class="sub-block">
+          <input type="date" id="mgr-halfday">
+        </div>
+      </div>
+
+      <div class="field" id="mgr-block-time" style="display:none;">
+        <label>日時<span class="hint">時間単位の場合</span></label>
+        <div class="sub-block">
+          <div class="row2">
+            <div>
+              <label style="font-weight:400;font-size:12px;">開始</label>
+              <input type="datetime-local" id="mgr-dtfrom">
+            </div>
+            <div>
+              <label style="font-weight:400;font-size:12px;">終了</label>
+              <input type="datetime-local" id="mgr-dtto">
+            </div>
+          </div>
+          <div class="calc-note" id="mgr-hours-note"></div>
+        </div>
+      </div>
+
       <div class="field">
         <label>事由・備考<span class="hint">任意</span></label>
         <input type="text" id="mgr-reason" placeholder="（任意）">
@@ -478,6 +523,8 @@ let staffList = [];
 let requestsCache = [];
 let managersList = [];
 let selectedManagerName = '';
+const SUBTYPES = ['全日','午前半休','午後半休','時間休'];
+let mgrSubtype = '全日';
 
 /* ---------- タブ切替 ---------- */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -593,20 +640,100 @@ function buildManagerGrid(){
   });
 }
 
+/* ---------- 取得区分グリッド生成（有給休暇と同じ：全日・半休・時間休） ---------- */
+const mgrSubtypeGrid = document.getElementById('mgr-subtype-grid');
+SUBTYPES.forEach(sub=>{
+  const div = document.createElement('div');
+  div.className = 'cat-opt';
+  div.textContent = sub;
+  div.dataset.sub = sub;
+  div.addEventListener('click', ()=>selectMgrSubtype(sub));
+  mgrSubtypeGrid.appendChild(div);
+});
+
+function selectMgrSubtype(sub){
+  mgrSubtype = sub;
+  document.querySelectorAll('#mgr-subtype-grid .cat-opt').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.sub === sub);
+  });
+  document.getElementById('mgr-block-day').style.display = (sub === '全日') ? 'block' : 'none';
+  document.getElementById('mgr-block-halfday').style.display = (sub === '午前半休' || sub === '午後半休') ? 'block' : 'none';
+  document.getElementById('mgr-block-time').style.display = (sub === '時間休') ? 'block' : 'none';
+}
+
+function calcMgrDays(){
+  const from = document.getElementById('mgr-datefrom').value;
+  const to = document.getElementById('mgr-dateto').value;
+  const note = document.getElementById('mgr-days-note');
+  if (!from || !to) { note.textContent = ''; return; }
+  const d1 = new Date(from), d2 = new Date(to);
+  const diff = Math.round((d2-d1)/86400000) + 1;
+  note.textContent = diff >= 1 ? diff + ' 日間' : '終了日は開始日以降にしてください';
+}
+document.getElementById('mgr-datefrom').addEventListener('change', calcMgrDays);
+document.getElementById('mgr-dateto').addEventListener('change', calcMgrDays);
+
+function calcMgrHours(){
+  const from = document.getElementById('mgr-dtfrom').value;
+  const to = document.getElementById('mgr-dtto').value;
+  const note = document.getElementById('mgr-hours-note');
+  if (!from || !to) { note.textContent = ''; return; }
+  const d1 = new Date(from), d2 = new Date(to);
+  const diffMin = Math.round((d2-d1)/60000);
+  if (diffMin < 0) { note.textContent = '終了は開始より後にしてください'; return; }
+  const h = Math.floor(diffMin/60), m = diffMin % 60;
+  note.textContent = h + ' 時間 ' + m + ' 分';
+}
+document.getElementById('mgr-dtfrom').addEventListener('change', calcMgrHours);
+document.getElementById('mgr-dtto').addEventListener('change', calcMgrHours);
+
 document.getElementById('mgr-submit').addEventListener('click', async ()=>{
   const msg = document.getElementById('mgr-msg');
   msg.className = 'msg';
 
   if (!selectedManagerName){ showMgrMsg(msg,'氏名を選択してください', false); return; }
-  const dateFrom = document.getElementById('mgr-datefrom').value;
-  const dateTo = document.getElementById('mgr-dateto').value;
-  if (!dateFrom || !dateTo){ showMgrMsg(msg,'開始日と終了日を入力してください', false); return; }
-  if (new Date(dateTo) < new Date(dateFrom)){ showMgrMsg(msg,'終了日は開始日以降にしてください', false); return; }
+
+  let dateFrom = document.getElementById('mgr-datefrom').value;
+  let dateTo = document.getElementById('mgr-dateto').value;
+  let dtFrom = document.getElementById('mgr-dtfrom').value;
+  let dtTo = document.getElementById('mgr-dtto').value;
+  let categoryDetail = '';
+
+  if (mgrSubtype === '午前半休' || mgrSubtype === '午後半休'){
+    const day = document.getElementById('mgr-halfday').value;
+    if (!day){ showMgrMsg(msg,'取得日を入力してください', false); return; }
+    dateFrom = day; dateTo = day;
+    dtFrom = ''; dtTo = '';
+    categoryDetail = mgrSubtype;
+  } else if (mgrSubtype === '時間休'){
+    dateFrom = ''; dateTo = '';
+    categoryDetail = mgrSubtype;
+    if (!dtFrom || !dtTo){ showMgrMsg(msg,'開始・終了の日時を入力してください', false); return; }
+  } else {
+    dtFrom = ''; dtTo = '';
+    categoryDetail = '';
+    if (!dateFrom || !dateTo){ showMgrMsg(msg,'開始日と終了日を入力してください', false); return; }
+    if (new Date(dateTo) < new Date(dateFrom)){ showMgrMsg(msg,'終了日は開始日以降にしてください', false); return; }
+  }
+
+  let days = '';
+  if (mgrSubtype === '午前半休' || mgrSubtype === '午後半休'){
+    days = 0.5;
+  } else if (dateFrom && dateTo){
+    const diff = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
+    days = diff >= 1 ? diff : '';
+  }
+  let hours = '';
+  if (dtFrom && dtTo){
+    const diffMin = Math.round((new Date(dtTo)-new Date(dtFrom))/60000);
+    if (diffMin >= 0) hours = Math.floor(diffMin/60)+':'+String(diffMin%60).padStart(2,'0');
+  }
 
   const payload = {
     name: selectedManagerName,
-    dateFrom: dateFrom,
-    dateTo: dateTo,
+    categoryDetail: categoryDetail,
+    dateFrom: dateFrom, dateTo: dateTo, days: days,
+    dtFrom: dtFrom, dtTo: dtTo, hours: hours,
     reason: document.getElementById('mgr-reason').value
   };
 
@@ -630,10 +757,17 @@ document.getElementById('mgr-submit').addEventListener('click', async ()=>{
 
 function resetMgrForm(){
   selectedManagerName = '';
+  mgrSubtype = '全日';
   document.querySelectorAll('#mgr-name-grid .cat-opt').forEach(el=>el.classList.remove('selected'));
-  document.getElementById('mgr-datefrom').value = '';
-  document.getElementById('mgr-dateto').value = '';
-  document.getElementById('mgr-reason').value = '';
+  document.querySelectorAll('#mgr-subtype-grid .cat-opt').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('mgr-block-day').style.display = 'block';
+  document.getElementById('mgr-block-halfday').style.display = 'none';
+  document.getElementById('mgr-block-time').style.display = 'none';
+  ['mgr-datefrom','mgr-dateto','mgr-dtfrom','mgr-dtto','mgr-halfday','mgr-reason'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('mgr-days-note').textContent = '';
+  document.getElementById('mgr-hours-note').textContent = '';
 }
 
 function showMgrMsg(el, text, ok){
@@ -651,11 +785,18 @@ function renderManagerHolidays(){
 
   card.style.display = 'block';
   list.innerHTML = mine.map(r=>{
-    const d1 = fmtDate(r['期間開始日']||'');
-    const d2 = fmtDate(r['期間終了日']||'');
-    const period = (d1 && d2) ? (d1 === d2 ? d1 : d1 + ' 〜 ' + d2) : '';
+    const detail = r['区分詳細'] ? '（'+r['区分詳細']+'）' : '';
+    let period = '';
+    if (r['期間開始日'] && r['期間終了日']){
+      const d1 = fmtDate(r['期間開始日']);
+      const d2 = fmtDate(r['期間終了日']);
+      period = (d1 === d2) ? d1 : (d1 + ' 〜 ' + d2);
+      if (r['日数']) period += '　(' + r['日数'] + '日間)';
+    } else if (r['開始日時'] && r['終了日時']){
+      period = r['開始日時'] + ' 〜 ' + r['終了日時'] + (r['時間'] ? '　(' + r['時間'] + ')' : '');
+    }
     return '<div class="mgr-row">'
-      + '<div class="mgr-info"><b>'+esc(r['氏名'])+'</b>'
+      + '<div class="mgr-info"><b>'+esc(r['氏名'])+esc(detail)+'</b>'
       + (period ? '<div class="mgr-period">'+esc(period)+(r['事由']?'　'+esc(r['事由']):'')+'</div>' : '')
       + '</div>'
       + '<button class="mgr-del" data-id="'+esc(r['ID'])+'">削除</button>'
