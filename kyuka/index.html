@@ -618,7 +618,9 @@ function renderMyRequests(){
     const catLabel = (r['区分']||'').replace(/^\d+\./,'').trim() + (r['区分詳細'] ? '（'+r['区分詳細']+'）' : '');
     let period = '';
     if (r['期間開始日'] && r['期間終了日']){
-      period = (r['期間開始日'] === r['期間終了日']) ? r['期間開始日'] : (r['期間開始日'] + ' 〜 ' + r['期間終了日']);
+      const d1 = String(r['期間開始日']).replace(/ 00:00$/,'');
+      const d2 = String(r['期間終了日']).replace(/ 00:00$/,'');
+      period = (d1 === d2) ? d1 : (d1 + ' 〜 ' + d2);
     } else if (r['開始日時'] && r['終了日時']){
       period = r['開始日時'] + ' 〜 ' + r['終了日時'];
     }
