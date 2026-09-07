@@ -298,13 +298,10 @@
       <div class="field">
         <label>区分</label>
         <div class="cat-grid" id="cat-grid"></div>
-        <div id="cat-detail-wrap" style="display:none; margin-top:10px;">
-          <input type="text" id="f-catdetail" placeholder="その他の内容を入力">
-        </div>
       </div>
 
-      <div class="field" id="paid-leave-sub" style="display:none;">
-        <label>取得区分<span class="hint">有給休暇の種類を選択</span></label>
+      <div class="field" id="paid-leave-sub">
+        <label>取得区分<span class="hint">全日・半休・時間休を選択</span></label>
         <div class="cat-grid" id="subtype-grid"></div>
       </div>
 
@@ -394,11 +391,7 @@
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxeKNRgxoeSAtl_CCSZLjl_r8nd6mY4WLvQQ939lQLJzcVMTDHfuaV7A822x0kvO8t3/exec";
 // ▲▲▲
 
-const PAID_LEAVE_CAT = '1.有給休暇';
-const OTHER_CAT = '10.その他';
-const DAY_BASED = ['1.有給休暇','2.振替休暇','3.慶弔休暇','4.特別休暇','5.欠勤','9.休日出勤'];
-const TIME_BASED = ['6.遅刻','7.早退','8.私用外出'];
-const CATEGORIES = ['1.有給休暇','2.振替休暇','3.慶弔休暇','4.特別休暇','5.欠勤','6.遅刻','7.早退','8.私用外出','9.休日出勤','10.その他'];
+const CATEGORIES = ['1.有給休暇','2.振替休暇','3.慶弔休暇','4.特別休暇','5.欠勤','6.遅刻','7.早退','8.私用外出','9.休日出勤','10.看護休暇'];
 const SUBTYPES = ['全日','午前半休','午後半休','時間休'];
 
 let staffList = [];
@@ -444,18 +437,8 @@ function selectCategory(cat){
   document.querySelectorAll('#cat-grid .cat-opt').forEach(el=>{
     el.classList.toggle('selected', el.dataset.cat === cat);
   });
-  document.getElementById('cat-detail-wrap').style.display = (cat === OTHER_CAT) ? 'block' : 'none';
-
-  const isPaidLeave = (cat === PAID_LEAVE_CAT);
-  document.getElementById('paid-leave-sub').style.display = isPaidLeave ? 'block' : 'none';
-
-  if (isPaidLeave){
-    selectSubtype(paidLeaveSubtype || '全日');
-  } else {
-    document.getElementById('block-halfday').style.display = 'none';
-    document.getElementById('block-day').style.display = DAY_BASED.includes(cat) ? 'block' : (cat===OTHER_CAT ? 'block' : 'none');
-    document.getElementById('block-time').style.display = TIME_BASED.includes(cat) ? 'block' : (cat===OTHER_CAT ? 'block' : 'none');
-  }
+  // どの区分でも、取得区分（全日・半休・時間休）の選び方は統一
+  selectSubtype(paidLeaveSubtype || '全日');
 }
 
 function selectSubtype(sub){
@@ -508,27 +491,24 @@ document.getElementById('btn-submit').addEventListener('click', async ()=>{
   let dateTo = document.getElementById('f-dateto').value;
   let dtFrom = document.getElementById('f-dtfrom').value;
   let dtTo = document.getElementById('f-dtto').value;
-  let categoryDetail = document.getElementById('f-catdetail').value;
+  let categoryDetail = '';
 
-  const isPaidLeave = (selectedCategory === PAID_LEAVE_CAT);
-  if (isPaidLeave){
-    if (paidLeaveSubtype === '午前半休' || paidLeaveSubtype === '午後半休'){
-      const day = document.getElementById('f-halfday').value;
-      if (!day){ showMsg(msg,'取得日を入力してください', false); return; }
-      dateFrom = day; dateTo = day;
-      dtFrom = ''; dtTo = '';
-      categoryDetail = paidLeaveSubtype;
-    } else if (paidLeaveSubtype === '時間休'){
-      dateFrom = ''; dateTo = '';
-      categoryDetail = paidLeaveSubtype;
-    } else {
-      dtFrom = ''; dtTo = '';
-      categoryDetail = '';
-    }
+  if (paidLeaveSubtype === '午前半休' || paidLeaveSubtype === '午後半休'){
+    const day = document.getElementById('f-halfday').value;
+    if (!day){ showMsg(msg,'取得日を入力してください', false); return; }
+    dateFrom = day; dateTo = day;
+    dtFrom = ''; dtTo = '';
+    categoryDetail = paidLeaveSubtype;
+  } else if (paidLeaveSubtype === '時間休'){
+    dateFrom = ''; dateTo = '';
+    categoryDetail = paidLeaveSubtype;
+  } else {
+    dtFrom = ''; dtTo = '';
+    categoryDetail = '';
   }
 
   let days = '';
-  if (isPaidLeave && (paidLeaveSubtype === '午前半休' || paidLeaveSubtype === '午後半休')){
+  if (paidLeaveSubtype === '午前半休' || paidLeaveSubtype === '午後半休'){
     days = 0.5;
   } else if (dateFrom && dateTo){
     const diff = Math.round((new Date(dateTo)-new Date(dateFrom))/86400000)+1;
@@ -572,9 +552,6 @@ function resetForm(){
   selectedCategory = '';
   paidLeaveSubtype = '全日';
   document.querySelectorAll('.cat-opt').forEach(el=>el.classList.remove('selected'));
-  document.getElementById('cat-detail-wrap').style.display = 'none';
-  document.getElementById('f-catdetail').value = '';
-  document.getElementById('paid-leave-sub').style.display = 'none';
   document.getElementById('block-day').style.display = 'block';
   document.getElementById('block-halfday').style.display = 'none';
   document.getElementById('block-time').style.display = 'none';
