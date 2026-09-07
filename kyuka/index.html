@@ -267,6 +267,81 @@
     font-size:13px;
     padding:20px;
   }
+
+  .cal-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .cal-nav-btn{
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:8px;
+    width:36px; height:36px;
+    font-size:18px;
+    font-weight:700;
+    color:var(--blue-dark);
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .cal-title{ font-size:15px; font-weight:700; color:var(--blue-dark); }
+  .cal-weekdays{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    text-align:center;
+    font-size:11px;
+    color:var(--muted);
+    font-weight:700;
+    margin-bottom:4px;
+  }
+  .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:3px;
+  }
+  .cal-cell{
+    min-height:60px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:3px 2px;
+    background:#fff;
+    cursor:pointer;
+    overflow:hidden;
+  }
+  .cal-cell.empty{ background:transparent; border-color:transparent; cursor:default; }
+  .cal-cell.today{ border-color:var(--blue); border-width:2px; }
+  .cal-daynum{ font-size:10.5px; color:var(--muted); font-weight:700; margin-bottom:2px; }
+  .cal-pill{
+    font-size:9px;
+    font-weight:700;
+    padding:1.5px 3px;
+    border-radius:5px;
+    margin-bottom:2px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .cal-pill.承認済み{ background:var(--ok-bg); color:var(--ok); }
+  .cal-pill.未承認{ background:var(--warn-bg); color:var(--warn); }
+  .cal-pill.more{ background:var(--bg); color:var(--muted); text-align:center; }
+  .cal-legend{
+    display:flex;
+    gap:14px;
+    margin-top:12px;
+    font-size:11.5px;
+    color:var(--muted);
+  }
+  .cal-legend-item{ display:flex; align-items:center; gap:5px; }
+  .dot{ width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .dot-ok{ background:var(--ok); }
+  .dot-warn{ background:var(--warn); }
+  #cal-detail-list .det-row{
+    padding:8px 0;
+    border-top:1px solid var(--line);
+    font-size:13.5px;
+  }
+  #cal-detail-list .det-row:first-child{ border-top:none; }
 </style>
 </head>
 <body>
@@ -279,6 +354,7 @@
 <div class="tabs">
   <button class="tab-btn active" data-tab="apply">申請</button>
   <button class="tab-btn" data-tab="list">承認・履歴</button>
+  <button class="tab-btn" data-tab="calendar">カレンダー</button>
 </div>
 
 <main>
@@ -373,6 +449,29 @@
     </div>
   </section>
 
+  <!-- ===== カレンダー タブ ===== -->
+  <section id="view-calendar" class="view">
+    <div class="card">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" id="cal-prev">‹</button>
+        <div class="cal-title" id="cal-title"></div>
+        <button class="cal-nav-btn" id="cal-next">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-legend">
+        <span class="cal-legend-item"><span class="dot dot-ok"></span>承認済み</span>
+        <span class="cal-legend-item"><span class="dot dot-warn"></span>未承認</span>
+      </div>
+    </div>
+    <div class="card" id="cal-detail" style="display:none;">
+      <div id="cal-detail-title" style="font-weight:700; color:var(--blue-dark); margin-bottom:4px;"></div>
+      <div id="cal-detail-list"></div>
+    </div>
+  </section>
+
 </main>
 
 <div id="confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:100; align-items:center; justify-content:center; padding:20px;">
@@ -405,7 +504,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('view-'+btn.dataset.tab).classList.add('active');
-    if (btn.dataset.tab === 'list') loadData();
+    if (btn.dataset.tab === 'list' || btn.dataset.tab === 'calendar') loadData();
   });
 });
 
@@ -543,6 +642,7 @@ async function loadData(){
     requestsCache = data.requests || [];
     fillNameSelects();
     renderList();
+    renderCalendar();
   } catch(err){
     wrap.innerHTML = '<div class="empty">通信エラーが発生しました。</div>';
   }
@@ -656,9 +756,97 @@ async function postAction(action, payload){
   return res.json();
 }
 
+/* ---------- カレンダー ---------- */
+let calCursor = new Date();
+calCursor.setDate(1);
+calCursor.setHours(0,0,0,0);
+
+function toDateKey(v){
+  if (!v) return '';
+  const m = String(v).match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (!m) return '';
+  return m[1] + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[3]).padStart(2,'0');
+}
+
+function getRequestsForDate(dateKey){
+  return requestsCache.filter(r=>{
+    const status = r['承認状況'] || '未承認';
+    if (status === '却下') return false;
+    if (r['期間開始日'] && r['期間終了日']){
+      const from = toDateKey(r['期間開始日']), to = toDateKey(r['期間終了日']);
+      return from && to && dateKey >= from && dateKey <= to;
+    } else if (r['開始日時']){
+      return toDateKey(r['開始日時']) === dateKey;
+    }
+    return false;
+  });
+}
+
+function renderCalendar(){
+  const year = calCursor.getFullYear();
+  const month = calCursor.getMonth();
+  document.getElementById('cal-title').textContent = year + '年 ' + (month+1) + '月';
+
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const todayKey = toDateKey(new Date().getFullYear() + '-' + (new Date().getMonth()+1) + '-' + new Date().getDate());
+
+  let html = '';
+  for (let i=0;i<firstDow;i++) html += '<div class="cal-cell empty"></div>';
+  for (let d=1; d<=daysInMonth; d++){
+    const dateKey = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const items = getRequestsForDate(dateKey);
+    const isToday = dateKey === todayKey;
+    let pillsHtml = items.slice(0,3).map(r=>{
+      const st = r['承認状況']||'未承認';
+      return '<div class="cal-pill '+st+'">'+esc(r['氏名'])+'</div>';
+    }).join('');
+    if (items.length > 3) pillsHtml += '<div class="cal-pill more">+'+(items.length-3)+'</div>';
+    html += '<div class="cal-cell'+(isToday?' today':'')+'" onclick="showDayDetail(\''+dateKey+'\')">'
+          + '<div class="cal-daynum">'+d+'</div>'
+          + pillsHtml
+          + '</div>';
+  }
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function showDayDetail(dateKey){
+  const items = getRequestsForDate(dateKey);
+  const panel = document.getElementById('cal-detail');
+  const title = document.getElementById('cal-detail-title');
+  const list = document.getElementById('cal-detail-list');
+  const parts = dateKey.split('-');
+  title.textContent = parts[0]+'年'+parseInt(parts[1],10)+'月'+parseInt(parts[2],10)+'日の休暇・予定';
+
+  if (items.length === 0){
+    list.innerHTML = '<div class="empty" style="padding:10px 0;">この日の申請はありません。</div>';
+  } else {
+    list.innerHTML = items.map(r=>{
+      const status = r['承認状況']||'未承認';
+      const catLabel = (r['区分']||'').replace(/^\d+\./,'').trim() + (r['区分詳細'] ? '（'+r['区分詳細']+'）' : '');
+      return '<div class="det-row"><b>'+esc(r['氏名'])+'</b>　'+esc(catLabel)
+        + ' <span class="badge '+status+'" style="margin-left:6px;">'+status+'</span></div>';
+    }).join('');
+  }
+  panel.style.display = 'block';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+document.getElementById('cal-prev').addEventListener('click', ()=>{
+  calCursor.setMonth(calCursor.getMonth()-1);
+  document.getElementById('cal-detail').style.display = 'none';
+  renderCalendar();
+});
+document.getElementById('cal-next').addEventListener('click', ()=>{
+  calCursor.setMonth(calCursor.getMonth()+1);
+  document.getElementById('cal-detail').style.display = 'none';
+  renderCalendar();
+});
+
 /* 初期表示: 申請タブでも氏名リストが要るので先読み */
 loadData();
 selectCategory('1.有給休暇');
+renderCalendar();
 </script>
 
 </body>
