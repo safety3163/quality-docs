@@ -269,6 +269,31 @@
   .badge.未承認{ background:var(--warn-bg); color:var(--warn); }
   .badge.承認済み{ background:var(--ok-bg); color:var(--ok); }
   .badge.却下{ background:var(--bad-bg); color:var(--bad); }
+
+  .my-req-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:11px 0;
+    border-top:1px solid var(--line);
+  }
+  .my-req-row:first-child{ border-top:none; }
+  .my-req-info b{ font-size:14px; }
+  .my-req-period{ font-size:12px; color:var(--muted); margin-top:2px; }
+  .my-req-del{
+    flex-shrink:0;
+    padding:8px 14px;
+    border:1px solid var(--bad);
+    border-radius:8px;
+    background:#fff;
+    color:var(--bad);
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .my-req-del:disabled{ opacity:.5; }
 </style>
 </head>
 <body>
@@ -359,6 +384,12 @@
       <button class="submit-btn" id="btn-submit">申請する</button>
       <div class="msg" id="apply-msg"></div>
     </div>
+
+    <div class="card" id="my-requests-card" style="display:none;">
+      <div style="font-weight:700;color:var(--blue-dark);margin-bottom:6px;">申請中の一覧（未承認）</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">間違えて申請した場合や予定が変わった場合はここから取り消せます。</div>
+      <div id="my-requests-list"></div>
+    </div>
   </section>
 
   <!-- ===== カレンダー タブ ===== -->
@@ -431,6 +462,8 @@ SUBTYPES.forEach(sub=>{
   div.addEventListener('click', ()=>selectSubtype(sub));
   subtypeGrid.appendChild(div);
 });
+
+document.getElementById('f-name').addEventListener('change', renderMyRequests);
 
 function selectCategory(cat){
   selectedCategory = cat;
@@ -537,6 +570,7 @@ document.getElementById('btn-submit').addEventListener('click', async ()=>{
     if (res.ok){
       showMsg(msg, '申請しました。承認をお待ちください。', true);
       resetForm();
+      await loadData();
     } else {
       showMsg(msg, 'エラー: ' + (res.error||'送信に失敗しました'), false);
     }
@@ -568,6 +602,55 @@ function showMsg(el, text, ok){
   el.style.display = 'block';
 }
 
+/* ---------- 申請中の一覧（取消） ---------- */
+function renderMyRequests(){
+  const name = document.getElementById('f-name').value;
+  const card = document.getElementById('my-requests-card');
+  const list = document.getElementById('my-requests-list');
+
+  if (!name){ card.style.display = 'none'; return; }
+
+  const mine = requestsCache.filter(r => r['氏名'] === name && (r['承認状況']||'未承認') === '未承認');
+  if (mine.length === 0){ card.style.display = 'none'; return; }
+
+  card.style.display = 'block';
+  list.innerHTML = mine.map(r=>{
+    const catLabel = (r['区分']||'').replace(/^\d+\./,'').trim() + (r['区分詳細'] ? '（'+r['区分詳細']+'）' : '');
+    let period = '';
+    if (r['期間開始日'] && r['期間終了日']){
+      period = (r['期間開始日'] === r['期間終了日']) ? r['期間開始日'] : (r['期間開始日'] + ' 〜 ' + r['期間終了日']);
+    } else if (r['開始日時'] && r['終了日時']){
+      period = r['開始日時'] + ' 〜 ' + r['終了日時'];
+    }
+    return '<div class="my-req-row">'
+      + '<div class="my-req-info"><b>'+esc(catLabel)+'</b>'
+      + (period ? '<div class="my-req-period">'+esc(period)+'</div>' : '')
+      + '</div>'
+      + '<button class="my-req-del" data-id="'+esc(r['ID'])+'">取消</button>'
+      + '</div>';
+  }).join('');
+
+  list.querySelectorAll('.my-req-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      if (!confirm('この申請を取り消しますか？\nこの操作は元に戻せません。')) return;
+      btn.disabled = true; btn.textContent = '削除中...';
+      try{
+        const res = await postAction('delete', { id: btn.dataset.id, name: name });
+        if (res.ok){
+          await loadData();
+          renderMyRequests();
+        } else {
+          alert('エラー: ' + (res.error || '削除に失敗しました'));
+          btn.disabled = false; btn.textContent = '取消';
+        }
+      } catch(err){
+        alert('通信エラーが発生しました。時間をおいて再度お試しください。');
+        btn.disabled = false; btn.textContent = '取消';
+      }
+    });
+  });
+}
+
 /* ---------- データ読み込み（氏名リスト・カレンダー用） ---------- */
 async function loadData(){
   try{
@@ -579,6 +662,7 @@ async function loadData(){
     requestsCache = data.requests || [];
     fillNameSelects();
     renderCalendar();
+    renderMyRequests();
   } catch(err){
     // 通信エラーは氏名リスト・カレンダーの更新のみに影響
   }
