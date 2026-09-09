@@ -682,6 +682,11 @@ function fillNameSelects(){
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+function fmtTime(v){
+  const m = String(v).match(/(\d{1,2}):(\d{2})/);
+  return m ? m[1] + ':' + m[2] : '';
+}
+
 async function postAction(action, payload){
   const res = await fetch(GAS_URL + '?action=' + action, {
     method: 'POST',
@@ -759,7 +764,11 @@ function showDayDetail(dateKey){
     list.innerHTML = items.map(r=>{
       const status = r['承認状況']||'未承認';
       const catLabel = (r['区分']||'').replace(/^\d+\./,'').trim() + (r['区分詳細'] ? '（'+r['区分詳細']+'）' : '');
-      return '<div class="det-row"><b>'+esc(r['氏名'])+'</b>　'+esc(catLabel)
+      let timeLabel = '';
+      if (r['区分詳細'] === '時間休' && r['開始日時'] && r['終了日時']){
+        timeLabel = '　' + fmtTime(r['開始日時']) + '〜' + fmtTime(r['終了日時']);
+      }
+      return '<div class="det-row"><b>'+esc(r['氏名'])+'</b>　'+esc(catLabel)+esc(timeLabel)
         + ' <span class="badge '+status+'" style="margin-left:6px;">'+status+'</span></div>';
     }).join('');
   }
