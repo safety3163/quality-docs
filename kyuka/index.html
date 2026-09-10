@@ -765,7 +765,7 @@ function showDayDetail(dateKey){
       const status = r['承認状況']||'未承認';
       const catLabel = (r['区分']||'').replace(/^\d+\./,'').trim() + (r['区分詳細'] ? '（'+r['区分詳細']+'）' : '');
       let timeLabel = '';
-      if (r['区分詳細'] === '時間休' && r['開始日時'] && r['終了日時']){
+      if (r['開始日時'] && r['終了日時']){
         timeLabel = '　' + fmtTime(r['開始日時']) + '〜' + fmtTime(r['終了日時']);
       }
       return '<div class="det-row"><b>'+esc(r['氏名'])+'</b>　'+esc(catLabel)+esc(timeLabel)
