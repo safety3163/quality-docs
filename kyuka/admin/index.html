@@ -621,6 +621,11 @@ function fmtDate(v){ return String(v==null?'':v).replace(/ 00:00$/,''); }
 function fmtDateTime(v){ return v; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+function fmtTime(v){
+  const m = String(v).match(/(\d{1,2}):(\d{2})/);
+  return m ? m[1] + ':' + m[2] : '';
+}
+
 /* ---------- 高野・平間の休み登録（申請・承認を経ない直接登録） ---------- */
 function buildManagerGrid(){
   const grid = document.getElementById('mgr-name-grid');
@@ -931,7 +936,11 @@ function showDayDetail(dateKey){
     list.innerHTML = items.map(r=>{
       const status = r['承認状況']||'未承認';
       const catLabel = (r['区分']||'').replace(/^\d+\./,'').trim() + (r['区分詳細'] ? '（'+r['区分詳細']+'）' : '');
-      return '<div class="det-row"><b>'+esc(r['氏名'])+'</b>　'+esc(catLabel)
+      let timeLabel = '';
+      if (r['開始日時'] && r['終了日時']){
+        timeLabel = '　' + fmtTime(r['開始日時']) + '〜' + fmtTime(r['終了日時']);
+      }
+      return '<div class="det-row"><b>'+esc(r['氏名'])+'</b>　'+esc(catLabel)+esc(timeLabel)
         + ' <span class="badge '+status+'" style="margin-left:6px;">'+status+'</span></div>';
     }).join('');
   }
