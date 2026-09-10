@@ -167,6 +167,7 @@
   .badge.new{ background:var(--new-soft); color:var(--new); }
   .badge.sample{ background:var(--surface-2); color:var(--ink-3); }
   .badge.critical{ background:var(--danger-soft); color:var(--danger); }
+  .badge.confirmed{ background:var(--good-soft); color:var(--good); }
   .badge.unseen{ background:var(--danger); color:#fff; }
   .badge.loc{ background:var(--surface-2); color:var(--ink-2); }
 
@@ -199,6 +200,7 @@
     cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
   .critical-toggle svg{ flex:none; }
   .critical-toggle.on{ background:var(--danger-soft); border-color:transparent; color:var(--danger); }
+  .critical-toggle.confirmed{ background:var(--good-soft); border-color:transparent; color:var(--good); }
 
   /* Small and visually quiet on purpose — deletion should never be the most
      prominent action on a card. It opens a confirmation modal rather than
@@ -209,6 +211,15 @@
     cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
   .doc-delete-btn:hover{ background:var(--danger-soft); color:var(--danger); }
   .doc-delete-btn svg{ flex:none; }
+
+  /* Same quiet treatment as .doc-delete-btn, and for the same reason:
+     clearing 要確認 entirely (as opposed to just confirming it — see
+     "確認済みにする") should stay reachable but never be the loud default
+     action next to the primary confirm button. */
+  .critical-unflag-btn{ align-self:flex-start; border:1.5px solid transparent; background:transparent; color:var(--ink-3);
+    padding:8px 10px; border-radius:10px; font-size:12.5px; font-weight:700;
+    cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+  .critical-unflag-btn:hover{ background:var(--surface-2); color:var(--ink-2); }
 
   /* ---------- Critical alert (on-screen notification) ---------- */
   .critical-alert{ position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-16px); width:calc(100% - 28px); max-width:460px;
@@ -598,7 +609,7 @@
   });
 
   // ---------------- State ----------------
-  var allDocs = [];      // {id, productNames, issueDate, documentType, issuer, summary, imageUrls, critical, criticalAt, isSample, location, ...} — populated by polling the GAS backend
+  var allDocs = [];      // {id, productNames, issueDate, documentType, issuer, summary, imageUrls, critical, criticalAt, confirmedAt, isSample, location, ...} — populated by polling the GAS backend
   var query = '';
   var dataLoaded = false;          // true once the first fetch (success or failure) has completed — distinguishes "still loading" from "genuinely no documents"
   var pollTimer = null;
@@ -648,6 +659,16 @@
         if(freshDocs[i].id === pid){
           freshDocs[i].critical = patch.critical;
           freshDocs[i].criticalAt = patch.criticalAt;
+          freshDocs[i].confirmedAt = patch.confirmedAt;
+          break;
+        }
+      }
+    });
+    Object.keys(pendingConfirmToggles).forEach(function(pid){
+      var patch = pendingConfirmToggles[pid];
+      for(var i=0;i<freshDocs.length;i++){
+        if(freshDocs[i].id === pid){
+          freshDocs[i].confirmedAt = patch.confirmedAt;
           break;
         }
       }
@@ -734,6 +755,7 @@
         location: payload.location,
         critical: false,
         criticalAt: null,
+        confirmedAt: null,
         isSample: false,
         createdAt: nowIso,
         updatedAt: nowIso,
@@ -863,7 +885,10 @@
   function toggleCritical(doc){
     if(pendingCriticalToggles[doc.id]) return; // avoid double-tap while a save is in flight
     var next = !doc.critical;
-    var patch = { critical: next, criticalAt: next ? new Date().toISOString() : null };
+    // Turning critical on (fresh flag) or off (un-flagging entirely) both
+    // start a clean slate, so confirmedAt is reset either way — mirrors
+    // what handleToggleCritical does server-side.
+    var patch = { critical: next, criticalAt: next ? new Date().toISOString() : null, confirmedAt: null };
 
     // Optimistic UI update: flip immediately so tapping always shows a visible
     // reaction, even before (or if) the network round-trip completes. Record
@@ -871,9 +896,11 @@
     // reconcilePending above) re-applies it instead of clobbering it.
     var prevCritical = doc.critical;
     var prevCriticalAt = doc.criticalAt;
+    var prevConfirmedAt = doc.confirmedAt;
     pendingCriticalToggles[doc.id] = patch;
     doc.critical = patch.critical;
     doc.criticalAt = patch.criticalAt;
+    doc.confirmedAt = patch.confirmedAt;
     render();
 
     // A 15s cap ensures the user always gets feedback (success or failure)
@@ -881,20 +908,51 @@
     // request stalls or is dropped without ever rejecting.
     withTimeout(apiPost('toggleCritical', {id: doc.id, critical: next}), 15000).then(function(resp){
       if(!resp || resp.ok !== true) throw new Error((resp && resp.error) || 'toggle failed');
-      showToast(next ? '要確認に設定しました' : '要確認を解除しました');
+      showToast(next ? '要確認に設定しました' : '要確認から外しました');
     }).catch(function(){
       // Revert the optimistic change since the save did not actually happen.
       var d = findDoc(doc.id);
-      if(d){ d.critical = prevCritical; d.criticalAt = prevCriticalAt; }
+      if(d){ d.critical = prevCritical; d.criticalAt = prevCriticalAt; d.confirmedAt = prevConfirmedAt; }
       render();
       showToast('更新に失敗しました。もう一度お試しください。');
     }).then(function(){
       delete pendingCriticalToggles[doc.id];
     });
   }
+
+  // Marks a 要確認 document as reviewed/resolved (or undoes that) WITHOUT
+  // touching `critical` — this is deliberately separate from toggleCritical
+  // so that confirming a document never removes it from the 要確認 tab. It
+  // used to be the same action (confirming == clearing `critical`), which
+  // made confirmed documents disappear entirely; now they stay listed with
+  // a "確認済み" badge instead. See docCardHtml for the three button states.
+  var pendingConfirmToggles = {}; // doc.id -> {confirmedAt} while a save is in flight
+  function confirmCritical(doc, next){
+    if(pendingConfirmToggles[doc.id]) return; // avoid double-tap while a save is in flight
+    var patch = { confirmedAt: next ? new Date().toISOString() : '' };
+
+    var prevConfirmedAt = doc.confirmedAt;
+    pendingConfirmToggles[doc.id] = patch;
+    doc.confirmedAt = patch.confirmedAt;
+    render();
+
+    withTimeout(apiPost('confirmCritical', {id: doc.id, confirmed: next}), 15000).then(function(resp){
+      if(!resp || resp.ok !== true) throw new Error((resp && resp.error) || 'confirm failed');
+      showToast(next ? '確認済みにしました' : '確認を取り消しました');
+    }).catch(function(){
+      var d = findDoc(doc.id);
+      if(d){ d.confirmedAt = prevConfirmedAt; }
+      render();
+      showToast('更新に失敗しました。もう一度お試しください。');
+    }).then(function(){
+      delete pendingConfirmToggles[doc.id];
+    });
+  }
   function updateTabBadges(){
     var seenCritical = getSeenIds();
-    var criticalCount = allDocs.filter(function(d){ return d.critical && !seenCritical.has(d.id); }).length;
+    // Confirmed documents no longer count toward the badge — they're done,
+    // they just stay listed in the tab as a record (see confirmCritical).
+    var criticalCount = allDocs.filter(function(d){ return d.critical && !d.confirmedAt && !seenCritical.has(d.id); }).length;
     var cBadge = document.getElementById('criticalBadge');
     if(criticalCount>0){ cBadge.hidden=false; cBadge.textContent = criticalCount>99 ? '99+' : String(criticalCount); }
     else{ cBadge.hidden = true; }
@@ -975,9 +1033,14 @@
   }
   function renderCriticalHome(docsList, seenBefore){
     var el = document.getElementById('content');
+    // Unconfirmed documents (still need review) always sort above confirmed
+    // ones (already reviewed, kept only as a record) — see confirmCritical.
     var list = docsList.slice().sort(function(a,b){
-      var ca = a.criticalAt || a.createdAt || '';
-      var cb = b.criticalAt || b.createdAt || '';
+      var aConfirmed = a.confirmedAt ? 1 : 0;
+      var bConfirmed = b.confirmedAt ? 1 : 0;
+      if(aConfirmed !== bConfirmed) return aConfirmed - bConfirmed;
+      var ca = (aConfirmed ? a.confirmedAt : (a.criticalAt || a.createdAt)) || '';
+      var cb = (bConfirmed ? b.confirmedAt : (b.criticalAt || b.createdAt)) || '';
       return cb < ca ? -1 : (cb > ca ? 1 : 0);
     });
     if(!list.length){
@@ -1033,17 +1096,33 @@
       ? '<div class="doc-thumb-wrap"><img class="doc-thumb" src="'+thumbs[0]+'" data-lightbox="'+escapeHtml(doc.id)+'" alt="文書画像">'+
         (thumbs.length>1 ? '<span class="thumb-pages">全'+thumbs.length+'枚</span>' : '')+'</div>'
       : '<div class="doc-thumb-wrap"><div class="thumb-fallback" style="width:56px;height:56px;border-radius:10px;">'+docTypeIconSvg()+'</div></div>';
+    var confirmed = !!doc.confirmedAt;
     var badges = '';
     if(isLatestInGroup) badges += '<span class="badge new">最新</span>';
     if(doc.documentType) badges += '<span class="badge type">'+escapeHtml(doc.documentType)+'</span>';
     if(doc.isSample) badges += '<span class="badge sample">サンプル</span>';
-    if(doc.critical) badges += '<span class="badge critical">要確認</span>';
-    if(doc.critical && seenIds && !seenIds.has(doc.id)) badges += '<span class="badge unseen">NEW</span>';
+    if(doc.critical && !confirmed) badges += '<span class="badge critical">要確認</span>';
+    if(doc.critical && confirmed) badges += '<span class="badge confirmed">確認済み</span>';
+    if(doc.critical && !confirmed && seenIds && !seenIds.has(doc.id)) badges += '<span class="badge unseen">NEW</span>';
     if(doc.location) badges += '<span class="badge loc">'+escapeHtml(doc.location)+'</span>';
-    var toggleBtn = '<button type="button" class="critical-toggle'+(doc.critical?' on':'')+'" data-critical-toggle="'+escapeHtml(doc.id)+'" aria-label="'+(doc.critical?'要確認から外す':'要確認にする')+'">'+
-      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 9v5M12 17h.01M10.3 3.9L2.5 18a2 2 0 0 0 1.8 3h15.4a2 2 0 0 0 1.8-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>'+
-      '<span>'+(doc.critical?'要確認を解除':'要確認にする')+'</span>'+
-    '</button>';
+    var warnIconSvg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 9v5M12 17h.01M10.3 3.9L2.5 18a2 2 0 0 0 1.8 3h15.4a2 2 0 0 0 1.8-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+    var checkIconSvg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    // Three states, one primary action button each — see confirmCritical for
+    // why "confirm" (data-confirm-toggle) and "un-flag entirely"
+    // (data-critical-toggle) are separate actions: confirming must never
+    // make the document disappear from the 要確認 tab.
+    var toggleBtn;
+    if(!doc.critical){
+      toggleBtn = '<button type="button" class="critical-toggle" data-critical-toggle="'+escapeHtml(doc.id)+'" aria-label="要確認にする">'+
+        warnIconSvg+'<span>要確認にする</span></button>';
+    } else if(!confirmed){
+      toggleBtn = '<button type="button" class="critical-toggle on" data-confirm-toggle="'+escapeHtml(doc.id)+'" aria-label="確認済みにする">'+
+        checkIconSvg+'<span>確認済みにする</span></button>'+
+        '<button type="button" class="critical-unflag-btn" data-critical-toggle="'+escapeHtml(doc.id)+'" aria-label="要確認から外す">要確認から外す</button>';
+    } else {
+      toggleBtn = '<button type="button" class="critical-toggle confirmed" data-confirm-toggle="'+escapeHtml(doc.id)+'" aria-label="確認を取り消す">'+
+        checkIconSvg+'<span>確認済み（取り消す）</span></button>';
+    }
     // Deliberately a small, low-emphasis icon-only button (not a filled
     // danger-colored button like the critical toggle) — the ask this exists
     // for is "make it possible to remove a badly-photographed registration",
@@ -1224,6 +1303,17 @@
           // which points the investigation at a very different place than
           // "the click never arrives".
           showToast('エラー: 文書が見つかりませんでした (id: '+docId+')');
+        }
+        return;
+      }
+      var cf = closestEl(e.target, '[data-confirm-toggle]');
+      if(cf){
+        var confirmId = cf.getAttribute('data-confirm-toggle');
+        var confirmDoc = findDoc(confirmId);
+        if(confirmDoc){
+          confirmCritical(confirmDoc, !confirmDoc.confirmedAt);
+        } else {
+          showToast('エラー: 文書が見つかりませんでした (id: '+confirmId+')');
         }
         return;
       }
