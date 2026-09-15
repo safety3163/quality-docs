@@ -798,10 +798,6 @@
 
   document.getElementById("btn-print").addEventListener("click", function(){
     var data = collectFormData();
-    if (!data.date || !data.area || !data.inspector1){
-      showToast("印刷の前に、実施日・実施エリア・実施者①を入力してください", "warn");
-      return;
-    }
     buildPrintRoot(data);
     try { window.print(); } catch (e) {}
   });
