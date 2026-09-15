@@ -431,7 +431,8 @@
 
   <div id="criticalIntro" class="critical-intro" style="display:none">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex:none;margin-top:1px"><path d="M12 9v5M12 17h.01M10.3 3.9L2.5 18a2 2 0 0 0 1.8 3h15.4a2 2 0 0 0 1.8-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-    <span>作業の前に必ず確認してください。品質管理側が重要と判断した文書のみ、ここに一覧表示されます。</span>
+    <span>作業の前に必ず確認してください。品質管理側が重要と判断した文書のみ、ここに一覧表示されます。<br>
+    <span id="criticalCountText" style="font-weight:800"></span></span>
   </div>
 
   <main id="content"></main>
@@ -1067,8 +1068,23 @@
     renderLocationBar();
     renderContent(index, scope, docsList, seenBefore);
     var scopeNote = (scope!=='critical' && myLocation && locFilterMode==='mine') ? '（'+myLocation+'のみ表示中）' : '';
-    document.getElementById('totalCount').textContent = scopedDocs.length + ' 件の文書 ・ ' + Object.keys(buildIndex(scopedDocs)).length + ' 商品' + scopeNote;
-    if(scope === 'critical'){ markAllCriticalSeen(); } else { markAllDocsSeen(); }
+    // docsList (not scopedDocs) is the count actually rendered for this scope:
+    // for the 要確認 tab, scopedDocs is every document company-wide, so using
+    // it here previously showed a much bigger number in the footer than the
+    // handful of critical cards actually on screen — read by at least one
+    // user as "すべてを押しても一部しか表示されない" (pressing "all" looked
+    // like it left documents out, when in fact every critical document WAS
+    // being shown; only the printed total was wrong).
+    document.getElementById('totalCount').textContent = docsList.length + ' 件の文書 ・ ' + Object.keys(index).length + ' 商品' + scopeNote;
+    if(scope === 'critical'){
+      var pendingCount = docsList.filter(function(d){ return !d.confirmedAt; }).length;
+      var confirmedCount = docsList.length - pendingCount;
+      document.getElementById('criticalCountText').textContent =
+        '現在の要確認文書: ' + docsList.length + '件（未確認 ' + pendingCount + '件・確認済み ' + confirmedCount + '件）';
+      markAllCriticalSeen();
+    } else {
+      markAllDocsSeen();
+    }
     updateTabBadges();
   }
 
