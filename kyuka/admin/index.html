@@ -293,6 +293,7 @@
   }
   .btn-approve{ background:var(--ok); color:#fff; }
   .btn-reject{ background:#fff; color:var(--bad); border:1px solid var(--bad) !important; }
+  .btn-delete{ background:#fff; color:var(--muted); border:1px solid var(--line) !important; }
 
   .empty{
     text-align:center;
@@ -608,11 +609,12 @@ function renderList(){
         <div><span class="k">申請日時:</span> ${esc(r['申請日時']||'')}</div>
       </div>
       ${r['事由'] ? '<div class="req-reason">'+esc(r['事由'])+'</div>' : ''}
-      ${status==='未承認' ? `
       <div class="req-actions">
+        ${status==='未承認' ? `
         <button class="btn-approve" onclick="doApprove('${r['ID']}')">承認する</button>
-        <button class="btn-reject" onclick="doReject('${r['ID']}')">却下する</button>
-      </div>` : ''}
+        <button class="btn-reject" onclick="doReject('${r['ID']}')">却下する</button>` : ''}
+        <button class="btn-delete" onclick="doDelete('${r['ID']}')">削除</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -839,6 +841,13 @@ function doApprove(id){
 function doReject(id){
   showConfirm('この申請を却下しますか？', async ()=>{
     await postAction('reject', {id});
+    loadData();
+    updateBadge();
+  });
+}
+function doDelete(id){
+  showConfirm('この申請を削除しますか？\nこの操作は元に戻せません。', async ()=>{
+    await postAction('adminDeleteHoliday', {id});
     loadData();
     updateBadge();
   });
