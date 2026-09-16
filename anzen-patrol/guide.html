@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>安全パトロールアプリ かんたん登録ガイド</title>
+<link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="icons/site.webmanifest">
+<meta name="theme-color" content="#F2B705">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#f3f1ea;
+    --surface:#ffffff;
+    --surface-2:#ece8dd;
+    --border:#dcd6c6;
+    --ink:#212a30;
+    --ink-dim:#646d63;
+    --brand:#28495f;
+    --brand-ink:#ffffff;
+    --brand-dim:#dde5e6;
+    --accent:#c1832c;
+    --good:#1e8e5a; --good-bg:#e6f5ec; --good-border:#bfe3cf;
+    --warn-bg:#fbf0df; --warn-border:#eccf9c;
+    --shadow:rgba(33,42,30,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#161a17; --surface:#1e2420; --surface-2:#262d27; --border:#3a423b;
+      --ink:#e9e7dd; --ink-dim:#a5ab9e; --brand:#8fb6c9; --brand-ink:#0f1a1f;
+      --brand-dim:#233238; --accent:#e0a94a;
+      --good:#69c08a; --good-bg:#173324; --good-border:#2c5c3f;
+      --warn-bg:#3a2e18; --warn-border:#5c4826;
+      --shadow:rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#161a17; --surface:#1e2420; --surface-2:#262d27; --border:#3a423b;
+    --ink:#e9e7dd; --ink-dim:#a5ab9e; --brand:#8fb6c9; --brand-ink:#0f1a1f;
+    --brand-dim:#233238; --accent:#e0a94a;
+    --good:#69c08a; --good-bg:#173324; --good-border:#2c5c3f;
+    --warn-bg:#3a2e18; --warn-border:#5c4826;
+    --shadow:rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif;
+  }
+  h1,h2,h3,.brand-title{font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;}
+
+  #page{max-width:920px;margin:0 auto;padding:0 0 60px;}
+
+  header.hero{
+    background:var(--brand);color:var(--brand-ink);
+    padding:22px 24px 20px;
+  }
+  header.hero .company{font-size:.8rem;opacity:.8;margin:0 0 4px;}
+  header.hero h1{margin:0 0 6px;font-size:1.5rem;font-weight:900;}
+  header.hero p{margin:0;font-size:.85rem;opacity:.9;}
+  .print-btn{
+    position:absolute;top:20px;right:24px;
+    font:inherit;font-weight:700;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);
+    color:inherit;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:.82rem;
+  }
+  .print-btn:hover{background:rgba(255,255,255,.22);}
+  header.hero{position:relative;}
+
+  main{padding:20px 20px 0;}
+
+  .intro{
+    background:var(--good-bg);border:1px solid var(--good-border);border-radius:10px;
+    padding:14px 16px;font-size:.85rem;line-height:1.7;color:var(--ink);margin-bottom:18px;
+  }
+
+  .qr-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:18px 20px;box-shadow:0 2px 10px var(--shadow);margin-bottom:22px;
+    display:grid;grid-template-columns:150px 1fr;gap:20px;align-items:center;
+  }
+  @media (max-width:520px){ .qr-card{grid-template-columns:1fr;justify-items:center;text-align:center;} }
+  .qr-wrap{
+    background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;
+    width:150px;height:150px;display:flex;align-items:center;justify-content:center;
+  }
+  .qr-card h2{margin:0 0 6px;font-size:1.05rem;color:var(--brand);}
+  .qr-card p{margin:0 0 8px;font-size:.82rem;line-height:1.6;color:var(--ink-dim);}
+  .url-box{
+    font-family:monospace;font-size:.78rem;background:var(--surface-2);
+    border:1px solid var(--border);border-radius:8px;padding:7px 10px;word-break:break-all;
+    color:var(--brand);display:inline-block;
+  }
+
+  .device-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px;}
+  @media (max-width:640px){ .device-grid{grid-template-columns:1fr;} }
+  .device-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;
+    box-shadow:0 2px 10px var(--shadow);
+  }
+  .device-card .dhead{background:var(--brand);color:var(--brand-ink);padding:12px 16px;}
+  .device-card .dhead .dname{font-weight:900;font-size:1rem;}
+  .device-card .dhead .dsub{font-size:.72rem;opacity:.85;margin-top:2px;}
+  .device-card ol{list-style:none;margin:0;padding:14px 16px 16px;counter-reset:step;}
+  .device-card li{
+    counter-increment:step;display:flex;gap:10px;align-items:flex-start;
+    font-size:.83rem;line-height:1.55;margin-bottom:12px;color:var(--ink);
+  }
+  .device-card li:last-child{margin-bottom:0;}
+  .device-card li::before{
+    content:counter(step);flex:none;width:22px;height:22px;border-radius:50%;
+    background:var(--brand-dim);color:var(--brand);font-weight:900;font-size:.75rem;
+    display:flex;align-items:center;justify-content:center;margin-top:1px;
+  }
+
+  .warn-box{
+    background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:10px;
+    padding:14px 16px;font-size:.82rem;line-height:1.7;margin-bottom:20px;
+  }
+  .warn-box .wtitle{font-weight:900;color:var(--ink);margin-bottom:6px;}
+  .warn-box ul{margin:0;padding-left:1.1em;}
+
+  footer{
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;
+    font-size:.72rem;color:var(--ink-dim);border-top:1px solid var(--border);
+    padding:12px 20px 0;
+  }
+
+  @media print{
+    @page{ size:A4 portrait; margin:12mm; }
+    html,body{background:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .print-btn{display:none !important;}
+    .qr-card, .device-card{box-shadow:none;border:1px solid #999;}
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <header class="hero">
+    <button class="print-btn" id="btn-print" type="button">印刷 / PDF保存</button>
+    <p class="company">東北機材センター</p>
+    <h1>安全パトロールアプリ　かんたん登録ガイド</h1>
+    <p>スマホ・タブレットの画面に、1タップで開けるアイコンを追加する手順です</p>
+  </header>
+
+  <main>
+    <div class="intro">
+      毎回URLを入力してブラウザを開く必要はありません。下の手順で端末のホーム画面(またはスタート画面)にアイコンを追加すると、次回からアイコンをタップするだけで「安全パトロール」がすぐに開きます。サインインは不要です。
+    </div>
+
+    <div class="qr-card">
+      <div class="qr-wrap" id="qrcode"></div>
+      <div>
+        <h2>まずはカメラでQRコードを読み取ってください</h2>
+        <p>iPhone・iPadは「カメラ」アプリでQRコードを読み取り、通知をタップすると Safari で開きます。Windowsタブレットは、カメラアプリまたは Microsoft Edge のQRコード読み取り機能をご利用ください。</p>
+        <div class="url-box" id="url-text">https://safety3163.github.io/quality-docs/anzen-patrol/</div>
+      </div>
+    </div>
+
+    <div class="device-grid">
+      <div class="device-card">
+        <div class="dhead">
+          <div class="dname">Windows タブレット</div>
+          <div class="dsub">Microsoft Edge でページを開いた状態から始めます</div>
+        </div>
+        <ol>
+          <li>QRコードを読み取るか、URLを入力して Microsoft Edge でこのページを開きます。</li>
+          <li>画面右上の「…」(設定など)ボタンをタップします。</li>
+          <li>「その他のツール」→「アプリ」と進みます。</li>
+          <li>「このサイトをアプリとしてインストールします」をタップします。</li>
+          <li>確認画面で「インストール」をタップすると、専用ウィンドウで開きます。</li>
+          <li>開いたウィンドウの「…」ボタンから「その他のツール」→「スタートにピン留めする」(または「タスク バーにピン留めする」)を選ぶと、次回から1タップで起動できます。</li>
+        </ol>
+      </div>
+
+      <div class="device-card">
+        <div class="dhead">
+          <div class="dname">iPad・iPhone</div>
+          <div class="dsub">Safari でページを開いた状態から始めます</div>
+        </div>
+        <ol>
+          <li>QRコードを読み取るか、URLを入力して Safari でこのページを開きます。</li>
+          <li>画面上部(またはアドレスバー付近)の共有ボタン(四角に上向き矢印のアイコン)をタップします。</li>
+          <li>一覧から「ホーム画面に追加」を選びます。見当たらない場合は一覧を下にスクロールしてください。</li>
+          <li>表示名を確認します(そのままで問題ありません)。</li>
+          <li>右上の「追加」をタップすると、ホーム画面にアイコンが追加されます。</li>
+          <li>次回からはそのアイコンをタップするだけで、安全パトロールの画面がすぐに開きます。</li>
+        </ol>
+      </div>
+
+      <div class="device-card">
+        <div class="dhead">
+          <div class="dname">Windows PC</div>
+          <div class="dsub">Edge / Chrome でページを開いた状態から始めます</div>
+        </div>
+        <ol>
+          <li>QRコードをスマホで読み取るか、URLをアドレスバーに直接入力してこのページを開きます。</li>
+          <li>ページが開いたら <b>Ctrl + D</b> でお気に入りに追加します。</li>
+          <li>次回からはお気に入りバーのアイコンをクリックするだけで開けます。</li>
+        </ol>
+      </div>
+
+      <div class="device-card">
+        <div class="dhead">
+          <div class="dname">基本の使い方</div>
+          <div class="dsub">アプリを開いたあとの流れ</div>
+        </div>
+        <ol>
+          <li>「新規記入」タブでチェック項目・評価を入力します。</li>
+          <li>入力が終わったら「提出する」を押します。</li>
+          <li>「記録一覧・管理」タブで、過去の記録の確認・編集・印刷ができます。</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="warn-box">
+      <div class="wtitle">うまくいかないときは</div>
+      <ul>
+        <li>Edgeに「アプリ」の項目が見当たらない場合は、Edge を最新版に更新してからお試しください。</li>
+        <li>iPad・iPhoneで「ホーム画面に追加」が見当たらない場合は、共有シートを下までスクロールしてください。</li>
+        <li>追加後に画面が真っ白になった場合は、アイコンを削除して手順をやり直してください(記録データは消えません)。</li>
+      </ul>
+    </div>
+
+    <footer>
+      <span>安全パトロール(東北機材センター)</span>
+      <span>サインイン不要でご利用いただけます</span>
+    </footer>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  (function(){
+    document.getElementById("btn-print").addEventListener("click", function(){
+      try { window.print(); } catch (e) {}
+    });
+    var url = "https://safety3163.github.io/quality-docs/anzen-patrol/";
+    document.getElementById("url-text").textContent = url;
+    try {
+      if (window.QRCode){
+        new QRCode(document.getElementById("qrcode"), {
+          text: url, width: 130, height: 130,
+          colorDark: "#212a30", colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+    } catch (e) {}
+  })();
+</script>
+</body>
+</html>

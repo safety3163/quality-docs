@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>安全パトロール記録</title>
+<link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="icons/site.webmanifest">
+<meta name="theme-color" content="#F2B705">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:#f3f1ea;
+    --surface:#ffffff;
+    --surface-2:#ece8dd;
+    --border:#dcd6c6;
+    --ink:#212a30;
+    --ink-dim:#646d63;
+    --brand:#28495f;
+    --brand-ink:#ffffff;
+    --brand-dim:#dde5e6;
+    --accent:#c1832c;
+    --good:#2f7a4f; --good-bg:#e2f2e6; --good-border:#b7dcc2;
+    --normal:#3d6a8a; --normal-bg:#e2edf3; --normal-border:#bcd7e4;
+    --caution:#b0472c; --caution-bg:#f8e4dc; --caution-border:#eabfae;
+    --shadow:rgba(33,42,30,.10);
+    --focus:#28495f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#161a17;
+      --surface:#1e2420;
+      --surface-2:#262d27;
+      --border:#3a423b;
+      --ink:#e9e7dd;
+      --ink-dim:#a5ab9e;
+      --brand:#8fb6c9;
+      --brand-ink:#0f1a1f;
+      --brand-dim:#233238;
+      --accent:#e0a94a;
+      --good:#69c08a; --good-bg:#173324; --good-border:#2c5c3f;
+      --normal:#86b9d8; --normal-bg:#17293a; --normal-border:#2c4d63;
+      --caution:#e5896a; --caution-bg:#3a2419; --caution-border:#6b3e2a;
+      --shadow:rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#161a17;
+    --surface:#1e2420;
+    --surface-2:#262d27;
+    --border:#3a423b;
+    --ink:#e9e7dd;
+    --ink-dim:#a5ab9e;
+    --brand:#8fb6c9;
+    --brand-ink:#0f1a1f;
+    --brand-dim:#233238;
+    --accent:#e0a94a;
+    --good:#69c08a; --good-bg:#173324; --good-border:#2c5c3f;
+    --normal:#86b9d8; --normal-bg:#17293a; --normal-border:#2c4d63;
+    --caution:#e5896a; --caution-bg:#3a2419; --caution-border:#6b3e2a;
+    --shadow:rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif;
+    font-variant-numeric:tabular-nums;
+  }
+  h1,h2,h3,.brand-title,.section-title,.tab{
+    font-family:"Zen Kaku Gothic New","Noto Sans JP",sans-serif;
+  }
+
+  #app{max-width:980px;margin:0 auto;padding:20px 16px 60px;}
+
+  .topbar{
+    display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+    padding:14px 18px;background:var(--brand);color:var(--brand-ink);
+    border-radius:14px;box-shadow:0 4px 14px var(--shadow);margin-bottom:18px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{width:38px;height:38px;flex:none;}
+  .brand-title{font-weight:900;font-size:1.15rem;line-height:1.1;letter-spacing:.02em;}
+  .brand-sub{font-size:.78rem;opacity:.85;margin-top:2px;}
+  .tabs{display:flex;gap:6px;background:rgba(255,255,255,.12);padding:4px;border-radius:10px;}
+  .tab{
+    appearance:none;border:0;background:transparent;color:inherit;
+    padding:8px 14px;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer;
+    opacity:.8;
+  }
+  .tab.active{background:var(--surface);color:var(--brand);opacity:1;}
+
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:22px clamp(16px,3vw,30px);box-shadow:0 2px 10px var(--shadow);margin-bottom:18px;
+  }
+  .form-title{display:flex;align-items:baseline;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-bottom:4px;}
+  .form-title h1{font-size:1.4rem;margin:0;}
+  .edit-flag{font-size:.78rem;color:var(--accent);font-weight:700;}
+  .lede{color:var(--ink-dim);font-size:.85rem;margin:0 0 18px;}
+
+  .meta-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;
+    margin-bottom:18px;
+  }
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field.wide{grid-column:1/-1;}
+  .field label{font-size:.78rem;font-weight:700;color:var(--ink-dim);letter-spacing:.02em;}
+  select,input[type="date"],input[type="text"],textarea{
+    font:inherit;color:var(--ink);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:8px;padding:9px 10px;width:100%;
+  }
+  select:focus,input:focus,textarea:focus{outline:2px solid var(--focus);outline-offset:1px;}
+  textarea{resize:vertical;min-height:64px;line-height:1.5;}
+
+  .roster-box{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+    padding:10px 14px;margin-bottom:16px;font-size:.85rem;
+  }
+  .roster-hint{font-weight:700;color:var(--brand);}
+  .roster-details{margin-top:6px;}
+  .roster-details summary{cursor:pointer;font-weight:700;color:var(--ink-dim);font-size:.8rem;}
+  .roster-details[open] summary{margin-bottom:8px;}
+  table.roster-table{width:100%;border-collapse:collapse;font-size:.82rem;min-width:280px;}
+  table.roster-table th,table.roster-table td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;}
+  table.roster-table th{background:var(--surface);color:var(--ink-dim);font-weight:700;font-size:.72rem;}
+  table.roster-table tr.cur td{background:var(--brand-dim);font-weight:700;}
+  .roster-note{color:var(--ink-dim);font-size:.75rem;margin:8px 0 0;}
+
+  .legend-box{
+    background:var(--brand-dim);border:1px solid var(--border);border-radius:10px;
+    padding:10px 14px;font-size:.85rem;font-weight:700;margin-bottom:16px;
+    display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;
+  }
+  .legend-box .lg-a{color:var(--good);} .legend-box .lg-b{color:var(--normal);} .legend-box .lg-c{color:var(--caution);}
+
+  .checklist{display:grid;grid-template-columns:1fr 1fr;gap:0 22px;margin-bottom:6px;}
+  @media (max-width:640px){ .checklist{grid-template-columns:1fr;} }
+  .check-col{display:flex;flex-direction:column;}
+  .check-row{
+    display:grid;grid-template-columns:1fr 84px;gap:10px;align-items:center;
+    padding:10px 0;border-bottom:1px solid var(--border);
+  }
+  .check-row .qtext{font-size:.86rem;line-height:1.45;}
+  .check-row .qtext b{color:var(--brand);font-size:1rem;margin-right:2px;}
+  .eval-select{padding:8px 6px;text-align:center;font-weight:700;}
+  .eval-select[data-val="A"]{background:var(--good-bg);border-color:var(--good-border);color:var(--good);}
+  .eval-select[data-val="B"]{background:var(--normal-bg);border-color:var(--normal-border);color:var(--normal);}
+  .eval-select[data-val="C"]{background:var(--caution-bg);border-color:var(--caution-border);color:var(--caution);}
+
+  .tally-row{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 22px;
+    padding:12px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+  }
+  .tally-row .tlabel{font-weight:900;color:var(--brand);margin-right:6px;}
+  .chip{padding:4px 12px;border-radius:999px;font-weight:700;font-size:.85rem;border:1px solid transparent;}
+  .chip.a{background:var(--good-bg);color:var(--good);border-color:var(--good-border);}
+  .chip.b{background:var(--normal-bg);color:var(--normal);border-color:var(--normal-border);}
+  .chip.c{background:var(--caution-bg);color:var(--caution);border-color:var(--caution-border);}
+  .chip.u{background:var(--surface);color:var(--ink-dim);border-color:var(--border);}
+
+  .free-item{margin-bottom:16px;}
+  .free-item .qtext{font-size:.9rem;font-weight:700;margin-bottom:8px;line-height:1.5;}
+  .free-item .qtext b{color:var(--brand);margin-right:4px;}
+
+  .notice{
+    display:flex;gap:10px;background:var(--brand-dim);border:1px solid var(--border);
+    border-left:4px solid var(--accent);border-radius:8px;padding:10px 12px;
+    font-size:.8rem;color:var(--ink);margin-bottom:8px;
+  }
+  .notice .pin{flex:none;font-weight:900;color:var(--accent);}
+
+  .section-title{font-size:1rem;font-weight:900;color:var(--brand);margin:22px 0 10px;padding-top:14px;border-top:1px solid var(--border);}
+
+  .actions-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
+  button.btn{
+    font:inherit;font-weight:700;border-radius:9px;padding:10px 18px;cursor:pointer;border:1px solid transparent;
+  }
+  .btn-primary{background:var(--brand);color:var(--brand-ink);}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-ghost{background:transparent;border-color:var(--border);color:var(--ink);}
+  .btn-ghost:hover{background:var(--surface-2);}
+  .btn-accent{background:var(--accent);color:#2a1c00;}
+  .btn-danger{background:transparent;border-color:var(--caution-border);color:var(--caution);}
+  button.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  .toast{
+    margin-top:14px;padding:10px 14px;border-radius:8px;font-size:.85rem;font-weight:700;
+  }
+  .toast.ok{background:var(--good-bg);color:var(--good);border:1px solid var(--good-border);}
+  .toast.warn{background:var(--caution-bg);color:var(--caution);border:1px solid var(--caution-border);}
+  .print-hint{font-size:.72rem;color:var(--ink-dim);margin-top:10px;}
+
+  .db-banner{
+    background:var(--caution-bg);color:var(--caution);border:1px solid var(--caution-border);
+    border-radius:10px;padding:10px 14px;font-size:.82rem;margin-bottom:16px;
+  }
+
+  /* history view */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:16px;}
+  .toolbar .field{min-width:160px;}
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;}
+  table.hist{width:100%;border-collapse:collapse;font-size:.85rem;min-width:760px;}
+  table.hist th,table.hist td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+  table.hist th{background:var(--surface-2);color:var(--ink-dim);font-weight:700;font-size:.75rem;letter-spacing:.03em;}
+  table.hist tbody tr:hover{background:var(--surface-2);}
+  table.hist td.area{white-space:normal;min-width:140px;}
+  .row-actions{display:flex;gap:6px;}
+  .row-actions button{
+    font:inherit;font-size:.78rem;font-weight:700;border-radius:6px;padding:5px 9px;cursor:pointer;
+    border:1px solid var(--border);background:var(--surface);color:var(--ink);
+  }
+  .row-actions button.danger{color:var(--caution);border-color:var(--caution-border);}
+  .empty-state{padding:34px 20px;text-align:center;color:var(--ink-dim);font-size:.9rem;}
+
+  /* print output */
+  #print-root{display:none;}
+  @media print{
+    @page{ size:A4 portrait; margin:10mm; }
+    html,body{background:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    #app{display:none !important;}
+    #print-root{
+      display:block !important;color:#1c2530;background:#fff;
+      font-family:"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;
+    }
+    #print-root *{box-shadow:none !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .p-title{
+      font-family:"Zen Kaku Gothic New",sans-serif;font-weight:900;font-size:19px;text-align:center;
+      background:#28495f !important;color:#fff !important;border-radius:5px;padding:9px 6px 6px;margin-bottom:2px;
+    }
+    .p-sub{text-align:center;font-size:10px;color:#5b6a72 !important;margin:0 0 8px;}
+    .p-meta{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid #ccc4b0;border-radius:5px;overflow:hidden;margin-bottom:8px;font-size:11px;}
+    .p-meta div{border-right:1px solid #ccc4b0;border-bottom:1px solid #ccc4b0;padding:6px 7px;background:#fff;}
+    .p-meta div:last-child{border-right:none;}
+    .p-meta .lab{background:#dde5e6 !important;color:#28495f !important;font-weight:700;font-size:9px;}
+    .p-legend{
+      border:1px solid #ccc4b0;border-top:none;border-radius:0 0 5px 5px;font-size:10.5px;font-weight:700;
+      padding:5px 8px;margin:-8px 0 8px;background:#f3f1ea !important;
+    }
+    .p-legend .ca{color:#2f7a4f !important;} .p-legend .cb{color:#3d6a8a !important;} .p-legend .cc{color:#b0472c !important;}
+    .p-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #ccc4b0;border-bottom:none;border-radius:5px 5px 0 0;overflow:hidden;}
+    .p-col{border-right:1px solid #ccc4b0;}
+    .p-col:last-child{border-right:none;}
+    .p-row{display:grid;grid-template-columns:1fr 34px;border-bottom:1px solid #ccc4b0;font-size:10px;}
+    .p-row:nth-child(odd){background:#f8f7f2 !important;}
+    .p-row .qc{padding:5px 6px;line-height:1.4;}
+    .p-row .ec{display:flex;align-items:center;justify-content:center;font-weight:900;border-left:1px solid #ccc4b0;}
+    .p-row .ec.ev-a{background:#e2f2e6 !important;color:#2f7a4f !important;}
+    .p-row .ec.ev-b{background:#e2edf3 !important;color:#3d6a8a !important;}
+    .p-row .ec.ev-c{background:#f8e4dc !important;color:#b0472c !important;}
+    .p-row .ec.ev-u{background:#f1f0ea !important;color:#9aa093 !important;}
+    .p-tally{border:1px solid #ccc4b0;border-top:none;border-radius:0 0 5px 5px;overflow:hidden;display:flex;font-size:11px;margin-bottom:10px;}
+    .p-tally div{flex:1;padding:6px 8px;border-right:1px solid #ccc4b0;border-left:none;font-weight:700;background:#fff !important;}
+    .p-tally div:last-child{border-right:none;}
+    .p-tally .lab{background:#dde5e6 !important;color:#28495f !important;flex:0 0 auto;min-width:52px;}
+    .p-tally .ca{color:#2f7a4f !important;} .p-tally .cb{color:#3d6a8a !important;} .p-tally .cc{color:#b0472c !important;}
+    .p-free{border:1px solid #ccc4b0;border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:10.5px;}
+    .p-free .q{font-weight:700;margin-bottom:5px;color:#28495f !important;}
+    .p-free .a{min-height:70px;white-space:pre-wrap;line-height:1.55;}
+    .p-notice{font-size:9.5px;padding:3px 2px;color:#5b6a72 !important;}
+    .p-remarks-title{font-weight:900;font-size:13px;margin:8px 0 6px;color:#28495f !important;}
+    .p-remarks{border:1px solid #ccc4b0;border-radius:6px;padding:9px 10px;min-height:100px;white-space:pre-wrap;font-size:10.5px;line-height:1.55;}
+    .p-foot{margin-top:8px;font-size:8.5px;color:#8a8f86 !important;text-align:right;}
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 3 L35 9 V19 C35 28 29 34 20 37 C11 34 5 28 5 19 V9 Z" fill="currentColor" opacity=".18"/>
+        <path d="M20 3 L35 9 V19 C35 28 29 34 20 37 C11 34 5 28 5 19 V9 Z" stroke="currentColor" stroke-width="2"/>
+        <path d="M13 20 L18 25 L28 14" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <div class="brand-title">安全パトロール</div>
+        <div class="brand-sub">東北機材センター</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="new" type="button">新規記入</button>
+      <button class="tab" data-tab="history" type="button">記録一覧・管理</button>
+    </nav>
+  </header>
+
+  <main id="view-new" class="view">
+    <div class="card">
+      <div class="form-title">
+        <h1>【安全パトロール】</h1>
+        <span class="edit-flag" id="edit-flag" hidden>編集中の記録を更新します</span>
+      </div>
+      <p class="lede">紙のパトロール用紙をそのままアプリ化したチェックシートです。入力後「提出」で記録し、「印刷/PDF」でこの内容をA4用紙に出力できます。</p>
+
+      <div id="db-banner" class="db-banner" hidden></div>
+
+      <div class="meta-grid">
+        <div class="field">
+          <label for="f-period">期</label>
+          <select id="f-period"></select>
+        </div>
+        <div class="field">
+          <label for="f-base">拠点</label>
+          <select id="f-base"><option value="東北" selected>東北</option></select>
+        </div>
+        <div class="field">
+          <label for="f-date">実施日</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="field wide">
+          <label for="f-area">実施エリア</label>
+          <input type="text" id="f-area" placeholder="例：ADF班 倉庫棟">
+        </div>
+        <div class="field">
+          <label for="f-insp1">実施者①</label>
+          <select id="f-insp1"></select>
+        </div>
+        <div class="field">
+          <label for="f-insp2">実施者②（単独実施の場合は「なし」）</label>
+          <select id="f-insp2"></select>
+        </div>
+      </div>
+
+      <div class="roster-box">
+        <div class="roster-hint">当番：<span id="roster-hint-text"></span></div>
+        <details class="roster-details">
+          <summary>当番表(ローテーション)を見る</summary>
+          <div class="table-wrap">
+            <table class="roster-table">
+              <thead><tr><th>年月</th><th>当番</th></tr></thead>
+              <tbody id="roster-table-body"></tbody>
+            </table>
+          </div>
+          <p class="roster-note">10月を1回目として「高野 → 石倉・東・小野寺 → 草刈・涼晴 → 丹野・岡崎 → 平間・弦」の順に1か月ごとに交代（5か月周期）。</p>
+        </details>
+      </div>
+
+      <div class="legend-box">
+        <span>評価</span>
+        <span class="lg-a">良好：A</span>／<span class="lg-b">普通：B</span>／<span class="lg-c">改善の余地あり：C</span>
+      </div>
+
+      <div class="checklist" id="checklist"></div>
+
+      <div class="tally-row" id="tally-row">
+        <span class="tlabel">合計</span>
+        <span class="chip a" id="chip-a">A：0</span>
+        <span class="chip b" id="chip-b">B：0</span>
+        <span class="chip c" id="chip-c">C：0</span>
+        <span class="chip u" id="chip-u">未評価：18</span>
+      </div>
+
+      <div id="free-items"></div>
+
+      <div class="section-title">【エリア担当者記入欄】 対策案等</div>
+      <div class="notice"><span class="pin">!</span><span>各エリア担当者は、過去の危険箇所が改善されているかの確認を必ず行ってください</span></div>
+      <div class="field wide">
+        <label for="f-remarks">対策案等（自由記入）</label>
+        <textarea id="f-remarks" rows="4" placeholder="例：ADF班裏側のCXGが倒れかかっている／ユーミックスのトイレの処分／ハウス班テント内の要整理整頓"></textarea>
+      </div>
+
+      <div class="actions-row">
+        <button class="btn btn-primary" id="btn-save" type="button">提出する</button>
+        <button class="btn btn-accent" id="btn-print" type="button">印刷 / PDF出力</button>
+        <button class="btn btn-ghost" id="btn-reset" type="button">クリア</button>
+        <button class="btn btn-ghost" id="btn-cancel-edit" type="button" hidden>編集をやめて新規に戻る</button>
+      </div>
+      <div class="print-hint">「印刷/PDF出力」が反応しない場合は、キーボードの Ctrl+P（Macは ⌘+P）をお試しください</div>
+      <div id="save-toast"></div>
+    </div>
+  </main>
+
+  <main id="view-history" class="view" hidden>
+    <div class="card">
+      <div class="form-title"><h1>記録一覧・管理</h1></div>
+      <p class="lede">提出済みのパトロール記録を検索・確認・印刷・編集・削除できます。</p>
+      <div class="toolbar">
+        <div class="field">
+          <label for="h-search">検索（エリア・実施者）</label>
+          <input type="text" id="h-search" placeholder="例：草刈 / 倉庫棟">
+        </div>
+        <div class="field">
+          <label for="h-period">期で絞り込み</label>
+          <select id="h-period"><option value="">すべて</option></select>
+        </div>
+        <button class="btn btn-ghost" id="btn-refresh" type="button">更新</button>
+      </div>
+      <div class="table-wrap">
+        <table class="hist">
+          <thead>
+            <tr><th>期</th><th>実施日</th><th>拠点</th><th>実施エリア</th><th>実施者</th><th>A</th><th>B</th><th>C</th><th>操作</th></tr>
+          </thead>
+          <tbody id="hist-body"></tbody>
+        </table>
+      </div>
+      <div id="hist-empty" class="empty-state" hidden>まだ記録がありません。「新規記入」タブからパトロール記録を登録してください。</div>
+    </div>
+  </main>
+</div>
+
+<div id="print-root"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ============================================================
+  // 設定：Google Apps Script のWebアプリ URL をここに貼り付けてください
+  // (デプロイ手順は SETUP.md を参照)
+  // ============================================================
+  var API_URL = "https://script.google.com/macros/s/AKfycby6kDa61N1_ue-G3xsPx1r55RygC09zrkFm9vzlTNJGEQIl5-ZCLhJZtN6h8URO0oGhHg/exec";
+  var apiReady = API_URL.indexOf("http") === 0;
+
+  var NAMES = ["高野","丹野","平間","草刈","石倉","弦","東","岡崎","涼晴","小野寺"];
+
+  var ROSTER_START = {year:2026, month:10};
+  var ROSTER_TURNS = [
+    ["高野"],
+    ["石倉","東","小野寺"],
+    ["草刈","涼晴"],
+    ["丹野","岡崎"],
+    ["平間","弦"]
+  ];
+  function rosterTurnIndex(y, m){
+    var months = (y - ROSTER_START.year) * 12 + (m - ROSTER_START.month);
+    return ((months % ROSTER_TURNS.length) + ROSTER_TURNS.length) % ROSTER_TURNS.length;
+  }
+  function rosterForYM(y, m){
+    return ROSTER_TURNS[rosterTurnIndex(y, m)];
+  }
+
+  var LEFT_ITEMS = [
+    "①お客様/来訪者/従業員同士で挨拶、声掛けを行っているか",
+    "②作業に適した服装をしているか（ヘルメット、保護帽子、安全靴、作業着等）",
+    "③熱中症/防寒対策を行なっているか",
+    "④看板/掲示物は不適切な物、外れかけた物は無いか",
+    "⑤指差呼称を実施しているか",
+    "⑥歩行者通路は確保されているか",
+    "⑦場内は整理整頓されているか",
+    "⑧事務所内は整理整頓されているか",
+    "⑨休憩所は整理整頓されているか"
+  ];
+  var RIGHT_ITEMS = [
+    "⑩工場の外周は清掃されているか",
+    "⑪トイレは清潔に保たれているか",
+    "⑫整備品・未整備品・不能品の区別ができているか",
+    "⑬商品の保管状況、取扱いに問題は無いか",
+    "⑫不要なものを無駄に長期間保管していないか",
+    "⑬消火器は適切な場所に設置されているか",
+    "⑯消火栓の前に障害物はないか",
+    "⑰防火シャッター付近に障害物はないか",
+    "⑱AEDは適切な場所に設置されているか（設置拠点）設置表示の有無、使用期限"
+  ];
+  var ITEM19 = "⑲危険な作業・無理な作業を行っていないか　～重量物の取扱い、フォークの運転等～";
+  var ITEM20 = "⑳事故、怪我の危険性がある箇所はないか　～ラック類・商品の置き方、積み重ね方、つまづき、衝突等～";
+
+  function el(tag, cls, html){
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+  function esc(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function todayStr(){
+    var d = new Date();
+    var m = String(d.getMonth()+1).padStart(2,"0");
+    var day = String(d.getDate()).padStart(2,"0");
+    return d.getFullYear()+"-"+m+"-"+day;
+  }
+
+  // ---- build static selects ----
+  var periodSel = document.getElementById("f-period");
+  for (var p = 38; p <= 55; p++){
+    var o = el("option", null); o.value = p; o.textContent = p + "期";
+    if (p === 41) o.selected = true;
+    periodSel.appendChild(o);
+  }
+  var histPeriodSel = document.getElementById("h-period");
+  for (var p2 = 38; p2 <= 55; p2++){
+    var o2 = el("option", null); o2.value = p2; o2.textContent = p2 + "期";
+    histPeriodSel.appendChild(o2);
+  }
+
+  function fillNameSelect(sel, allowNone){
+    sel.innerHTML = "";
+    if (allowNone){
+      var noneOpt = el("option", null, "（なし・単独実施）");
+      noneOpt.value = "";
+      sel.appendChild(noneOpt);
+    } else {
+      var ph = el("option", null, "選択してください");
+      ph.value = ""; ph.disabled = true; ph.selected = true;
+      sel.appendChild(ph);
+    }
+    NAMES.forEach(function(n){
+      var o = el("option", null, n); o.value = n; sel.appendChild(o);
+    });
+  }
+  var insp1 = document.getElementById("f-insp1");
+  var insp2 = document.getElementById("f-insp2");
+  fillNameSelect(insp1, false);
+  fillNameSelect(insp2, true);
+
+  document.getElementById("f-date").value = todayStr();
+
+  // ---- roster (duty rotation) ----
+  function updateRosterHint(){
+    var dv = document.getElementById("f-date").value;
+    var y, m;
+    if (dv){
+      var parts = dv.split("-");
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10);
+    } else {
+      var now = new Date();
+      y = now.getFullYear(); m = now.getMonth() + 1;
+    }
+    document.getElementById("roster-hint-text").textContent =
+      y + "年" + m + "月：" + rosterForYM(y, m).join("・");
+  }
+  function buildRosterTable(){
+    var now = new Date();
+    var body = document.getElementById("roster-table-body");
+    var rows = "";
+    for (var i = 0; i < 12; i++){
+      var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      var y = d.getFullYear(), m = d.getMonth() + 1;
+      var names = rosterForYM(y, m).join("・");
+      rows += "<tr" + (i === 0 ? ' class="cur"' : "") + "><td>" + y + "年" + m + "月" +
+        (i === 0 ? ' <span class="chip a">今月</span>' : "") + "</td><td>" + esc(names) + "</td></tr>";
+    }
+    body.innerHTML = rows;
+  }
+  document.getElementById("f-date").addEventListener("change", updateRosterHint);
+  updateRosterHint();
+  buildRosterTable();
+
+  // ---- build checklist ----
+  var checklistEl = document.getElementById("checklist");
+  var leftCol = el("div", "check-col");
+  var rightCol = el("div", "check-col");
+  checklistEl.appendChild(leftCol);
+  checklistEl.appendChild(rightCol);
+
+  var evalSelects = []; // 18 selects, index 0-8 left, 9-17 right
+
+  function makeEvalSelect(idx){
+    var s = document.createElement("select");
+    s.className = "eval-select";
+    s.id = "eval-" + idx;
+    [["", "－"], ["A","A"], ["B","B"], ["C","C"]].forEach(function(pair){
+      var o = el("option", null, pair[1]); o.value = pair[0]; s.appendChild(o);
+    });
+    s.addEventListener("change", function(){
+      s.setAttribute("data-val", s.value);
+      updateTally();
+    });
+    return s;
+  }
+
+  function buildChecklistCol(container, items, offset){
+    items.forEach(function(text, i){
+      var row = el("div", "check-row");
+      var q = el("div", "qtext");
+      var first = text.charAt(0);
+      q.innerHTML = "<b>" + esc(first) + "</b>" + esc(text.slice(1)).replace(/\n/g,"<br>");
+      var sel = makeEvalSelect(offset + i);
+      evalSelects[offset + i] = sel;
+      row.appendChild(q);
+      row.appendChild(sel);
+      container.appendChild(row);
+    });
+  }
+  buildChecklistCol(leftCol, LEFT_ITEMS, 0);
+  buildChecklistCol(rightCol, RIGHT_ITEMS, 9);
+
+  function updateTally(){
+    var a=0,b=0,c=0,u=0;
+    evalSelects.forEach(function(s){
+      if (s.value === "A") a++;
+      else if (s.value === "B") b++;
+      else if (s.value === "C") c++;
+      else u++;
+    });
+    document.getElementById("chip-a").textContent = "A：" + a;
+    document.getElementById("chip-b").textContent = "B：" + b;
+    document.getElementById("chip-c").textContent = "C：" + c;
+    document.getElementById("chip-u").textContent = "未評価：" + u;
+    return {a:a,b:b,c:c,u:u};
+  }
+  updateTally();
+
+  // ---- free text items 19/20 ----
+  var freeItemsEl = document.getElementById("free-items");
+  var freeInputs = [];
+  [ITEM19, ITEM20].forEach(function(text, i){
+    var wrap = el("div", "free-item");
+    var q = el("div", "qtext");
+    q.innerHTML = "<b>" + esc(text.charAt(0)) + "</b>" + esc(text.slice(1));
+    var ta = document.createElement("textarea");
+    ta.rows = 2;
+    ta.id = "free-" + i;
+    ta.placeholder = "気づいた点を記入（なければ「特になし」)";
+    wrap.appendChild(q);
+    wrap.appendChild(ta);
+    freeItemsEl.appendChild(wrap);
+    freeInputs.push(ta);
+  });
+
+  // ---- backend API (Google Apps Script + スプレッドシート) ----
+  function setDbBanner(msg){
+    var banner = document.getElementById("db-banner");
+    if (!msg){ banner.hidden = true; banner.textContent = ""; return; }
+    banner.hidden = false;
+    banner.textContent = msg;
+  }
+  if (!apiReady){
+    setDbBanner("提出・一覧表示にはAPI_URLの設定が必要です（SETUP.mdを参照）。入力・印刷は引き続き利用できます。");
+  }
+
+  function apiList(){
+    return fetch(API_URL + "?action=list").then(function(r){ return r.json(); }).then(function(j){
+      if (!j.ok) throw new Error(j.error || "list failed");
+      return j.reports;
+    });
+  }
+  function apiCreate(data){
+    return fetch(API_URL, {method:"POST", body: JSON.stringify({action:"create", data:data})})
+      .then(function(r){ return r.json(); }).then(function(j){
+        if (!j.ok) throw new Error(j.error || "create failed");
+        return j.id;
+      });
+  }
+  function apiUpdate(id, data){
+    return fetch(API_URL, {method:"POST", body: JSON.stringify({action:"update", id:id, data:data})})
+      .then(function(r){ return r.json(); }).then(function(j){
+        if (!j.ok) throw new Error(j.error || "update failed");
+      });
+  }
+  function apiDelete(id){
+    return fetch(API_URL, {method:"POST", body: JSON.stringify({action:"delete", id:id})})
+      .then(function(r){ return r.json(); }).then(function(j){
+        if (!j.ok) throw new Error(j.error || "delete failed");
+      });
+  }
+
+  var editingId = null;
+  var histDocs = [];
+
+  function collectFormData(){
+    var evals = evalSelects.map(function(s){ return s.value; });
+    return {
+      period: Number(periodSel.value),
+      base: document.getElementById("f-base").value,
+      date: document.getElementById("f-date").value,
+      area: document.getElementById("f-area").value.trim(),
+      inspector1: insp1.value,
+      inspector2: insp2.value,
+      evals: evals,
+      item19: freeInputs[0].value,
+      item20: freeInputs[1].value,
+      remarks: document.getElementById("f-remarks").value,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function applyFormData(data){
+    periodSel.value = String(data.period || 41);
+    document.getElementById("f-date").value = data.date || todayStr();
+    document.getElementById("f-area").value = data.area || "";
+    insp1.value = data.inspector1 || "";
+    insp2.value = data.inspector2 || "";
+    (data.evals || []).forEach(function(v, i){
+      if (evalSelects[i]){ evalSelects[i].value = v || ""; evalSelects[i].setAttribute("data-val", v || ""); }
+    });
+    freeInputs[0].value = data.item19 || "";
+    freeInputs[1].value = data.item20 || "";
+    document.getElementById("f-remarks").value = data.remarks || "";
+    updateTally();
+    updateRosterHint();
+  }
+
+  function resetForm(){
+    periodSel.value = "41";
+    document.getElementById("f-date").value = todayStr();
+    document.getElementById("f-area").value = "";
+    insp1.selectedIndex = 0;
+    insp2.selectedIndex = 0;
+    evalSelects.forEach(function(s){ s.value = ""; s.removeAttribute("data-val"); });
+    freeInputs.forEach(function(t){ t.value = ""; });
+    document.getElementById("f-remarks").value = "";
+    updateTally();
+    updateRosterHint();
+    editingId = null;
+    document.getElementById("edit-flag").hidden = true;
+    document.getElementById("btn-cancel-edit").hidden = true;
+    document.getElementById("btn-save").textContent = "提出する";
+    document.getElementById("save-toast").innerHTML = "";
+  }
+
+  function showToast(msg, kind){
+    document.getElementById("save-toast").innerHTML =
+      '<div class="toast ' + (kind||"ok") + '">' + esc(msg) + "</div>";
+  }
+
+  function validate(data){
+    var errs = [];
+    if (!data.date) errs.push("実施日を選択してください");
+    if (!data.area) errs.push("実施エリアを入力してください");
+    if (!data.inspector1) errs.push("実施者①を選択してください");
+    if (data.inspector1 && data.inspector2 && data.inspector1 === data.inspector2) errs.push("実施者①と②は別の氏名を選択してください");
+    var unrated = data.evals.filter(function(v){ return !v; }).length;
+    if (unrated > 0) errs.push("未評価の項目が" + unrated + "件あります（①〜⑱すべて評価してください）");
+    return errs;
+  }
+
+  document.getElementById("btn-save").addEventListener("click", function(){
+    var data = collectFormData();
+    var errs = validate(data);
+    if (errs.length){
+      showToast(errs.join(" / "), "warn");
+      return;
+    }
+    if (!apiReady){
+      showToast("提出機能が設定されていません（API_URL未設定）。印刷はご利用いただけます。", "warn");
+      return;
+    }
+    data.createdAt = data.updatedAt;
+    var p = editingId ? apiUpdate(editingId, data) : apiCreate(data);
+    p.then(function(){
+      showToast(editingId ? "更新しました" : "提出しました", "ok");
+      if (!document.getElementById("view-history").hidden) loadHistory();
+    }).catch(function(e){
+      showToast("提出に失敗しました：" + (e && e.message ? e.message : "通信エラー"), "warn");
+    });
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", function(){
+    if (confirm("入力内容をクリアします。よろしいですか？")) resetForm();
+  });
+  document.getElementById("btn-cancel-edit").addEventListener("click", function(){
+    resetForm();
+  });
+
+  // ---- print ----
+  function letterChip(v){
+    return v ? esc(v) : "－";
+  }
+  function evClass(v){
+    return v === "A" ? "ev-a" : v === "B" ? "ev-b" : v === "C" ? "ev-c" : "ev-u";
+  }
+  function buildPrintRoot(data){
+    var root = document.getElementById("print-root");
+    function colHtml(items, offset){
+      var h = "";
+      items.forEach(function(text, i){
+        var v = data.evals[offset+i] || "";
+        h += '<div class="p-row"><div class="qc">' + esc(text).replace(/\n/g,"<br>") + '</div>' +
+             '<div class="ec ' + evClass(v) + '">' + letterChip(v) + "</div></div>";
+      });
+      return h;
+    }
+    var tally = {a:0,b:0,c:0};
+    data.evals.forEach(function(v){ if(v==="A")tally.a++; else if(v==="B")tally.b++; else if(v==="C")tally.c++; });
+
+    var inspectors = [data.inspector1, data.inspector2].filter(Boolean).join("・") || "－";
+    var now = new Date();
+    var stamp = now.getFullYear()+"/"+String(now.getMonth()+1).padStart(2,"0")+"/"+String(now.getDate()).padStart(2,"0")+" "+
+                String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+
+    root.innerHTML =
+      '<div class="p-title">【安全パトロール】</div>' +
+      '<div class="p-sub">東北機材センター</div>' +
+      '<div class="p-meta">' +
+        '<div class="lab">期</div><div>' + esc(data.period) + '期</div>' +
+        '<div class="lab">拠点</div><div>' + esc(data.base) + '</div>' +
+        '<div class="lab">実施日</div><div>' + esc(data.date) + '</div>' +
+        '<div class="lab">実施エリア</div><div>' + esc(data.area) + '</div>' +
+        '<div class="lab">実施者</div><div>' + esc(inspectors) + '</div>' +
+        '<div></div><div></div>' +
+      '</div>' +
+      '<div class="p-legend">評価　<span class="ca">良好：A</span>　／　<span class="cb">普通：B</span>　／　<span class="cc">改善の余地あり：C</span></div>' +
+      '<div class="p-grid"><div class="p-col">' + colHtml(LEFT_ITEMS,0) + '</div><div class="p-col">' + colHtml(RIGHT_ITEMS,9) + '</div></div>' +
+      '<div class="p-tally"><div class="lab">合計</div><div class="ca">A：' + tally.a + '</div><div class="cb">B：' + tally.b + '</div><div class="cc">C：' + tally.c + '</div></div>' +
+      '<div class="p-free"><div class="q">' + esc(ITEM19) + '</div><div class="a">' + esc(data.item19 || "特になし") + '</div></div>' +
+      '<div class="p-free"><div class="q">' + esc(ITEM20) + '</div><div class="a">' + esc(data.item20 || "特になし") + '</div></div>' +
+      '<div class="p-remarks-title">【エリア担当者記入欄】 対策案等</div>' +
+      '<div class="p-notice">・各エリア担当者は、過去の危険箇所が改善されているかの確認を必ず行ってください</div>' +
+      '<div class="p-remarks">' + esc(data.remarks || "") + '</div>' +
+      '<div class="p-foot">印刷日時：' + stamp + '</div>';
+  }
+
+  document.getElementById("btn-print").addEventListener("click", function(){
+    var data = collectFormData();
+    buildPrintRoot(data);
+    try { window.print(); } catch (e) {}
+  });
+
+  // ---- tabs ----
+  var tabs = document.querySelectorAll(".tab");
+  tabs.forEach(function(t){
+    t.addEventListener("click", function(){
+      tabs.forEach(function(x){ x.classList.remove("active"); });
+      t.classList.add("active");
+      document.getElementById("view-new").hidden = t.dataset.tab !== "new";
+      document.getElementById("view-history").hidden = t.dataset.tab !== "history";
+      if (t.dataset.tab === "history") loadHistory();
+    });
+  });
+
+  // ---- history ----
+  function renderHistory(){
+    var body = document.getElementById("hist-body");
+    var q = document.getElementById("h-search").value.trim().toLowerCase();
+    var pf = document.getElementById("h-period").value;
+    var rows = histDocs.filter(function(r){
+      var d = r.data;
+      if (pf && String(d.period) !== pf) return false;
+      if (q){
+        var hay = (d.area||"") + " " + (d.inspector1||"") + " " + (d.inspector2||"");
+        if (hay.toLowerCase().indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+    body.innerHTML = "";
+    document.getElementById("hist-empty").hidden = rows.length > 0;
+    rows.forEach(function(r){
+      var d = r.data;
+      var tally = {a:0,b:0,c:0};
+      (d.evals||[]).forEach(function(v){ if(v==="A")tally.a++; else if(v==="B")tally.b++; else if(v==="C")tally.c++; });
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + esc(d.period) + "期</td>" +
+        "<td>" + esc(d.date) + "</td>" +
+        "<td>" + esc(d.base) + "</td>" +
+        '<td class="area">' + esc(d.area) + "</td>" +
+        "<td>" + esc([d.inspector1,d.inspector2].filter(Boolean).join("・")) + "</td>" +
+        "<td>" + tally.a + "</td><td>" + tally.b + "</td><td>" + tally.c + "</td>" +
+        '<td><div class="row-actions">' +
+          '<button data-act="print" data-id="' + r.id + '">印刷</button>' +
+          '<button data-act="edit" data-id="' + r.id + '">編集</button>' +
+          '<button data-act="del" class="danger" data-id="' + r.id + '">削除</button>' +
+        "</div></td>";
+      body.appendChild(tr);
+    });
+  }
+
+  function loadHistory(){
+    if (!apiReady){ setDbBanner("提出・一覧表示にはAPI_URLの設定が必要です（SETUP.mdを参照）。入力・印刷は引き続き利用できます。"); return; }
+    apiList().then(function(reports){
+      histDocs = reports.map(function(r){ return {id:r.id, data:r}; });
+      histDocs.sort(function(a,b){ return (b.data.date||"").localeCompare(a.data.date||""); });
+      setDbBanner(null);
+      renderHistory();
+    }).catch(function(){
+      setDbBanner("記録の取得に失敗しました。通信環境を確認するか、しばらくしてから「更新」を押してください。");
+    });
+  }
+
+  document.getElementById("hist-body").addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    var id = btn.dataset.id;
+    var rec = histDocs.find(function(r){ return r.id === id; });
+    if (!rec) return;
+    if (btn.dataset.act === "print"){
+      buildPrintRoot(rec.data);
+      try { window.print(); } catch (e) {}
+    } else if (btn.dataset.act === "edit"){
+      applyFormData(rec.data);
+      editingId = id;
+      document.getElementById("edit-flag").hidden = false;
+      document.getElementById("btn-cancel-edit").hidden = false;
+      document.getElementById("btn-save").textContent = "更新する";
+      tabs.forEach(function(x){ x.classList.remove("active"); });
+      document.querySelector('.tab[data-tab="new"]').classList.add("active");
+      document.getElementById("view-new").hidden = false;
+      document.getElementById("view-history").hidden = true;
+      window.scrollTo(0,0);
+    } else if (btn.dataset.act === "del"){
+      if (!apiReady) return;
+      if (confirm("この記録を削除します。よろしいですか？")){
+        apiDelete(id).then(loadHistory).catch(function(){ showToast("削除に失敗しました", "warn"); });
+      }
+    }
+  });
+
+  document.getElementById("h-search").addEventListener("input", renderHistory);
+  document.getElementById("h-period").addEventListener("change", renderHistory);
+  document.getElementById("btn-refresh").addEventListener("click", loadHistory);
+})();
+</script>
+</body>
+</html>
