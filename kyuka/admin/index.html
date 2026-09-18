@@ -847,9 +847,17 @@ function doReject(id){
 }
 function doDelete(id){
   showConfirm('この申請を削除しますか？\nこの操作は元に戻せません。', async ()=>{
-    await postAction('adminDeleteHoliday', {id});
-    loadData();
-    updateBadge();
+    try{
+      const res = await postAction('adminDeleteHoliday', {id});
+      if (res.ok){
+        await loadData();
+        updateBadge();
+      } else {
+        alert('エラー: ' + (res.error || '削除に失敗しました'));
+      }
+    } catch(err){
+      alert('通信エラーが発生しました。時間をおいて再度お試しください。');
+    }
   });
 }
 
